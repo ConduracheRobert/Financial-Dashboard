@@ -54,4 +54,14 @@ input:focus, select:focus {
 @media (max-width: 400px) {
   .filters-container { flex-direction: column; }
 }
+/* --- ADAPTARE DARK MODE --- */
+:global(body.dark-mode) input,
+:global(body.dark-mode) select {
+  background-color: #1a1a2e;
+  color: #f1f1f1;
+  border: 1px solid #0f3460;
+}
+:global(body.dark-mode) input::placeholder { 
+  color: #7f8c8d; 
+}
 </style>

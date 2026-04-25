@@ -66,4 +66,21 @@ const formattedPeriod = computed(() => {
 .period-controls { display: flex; justify-content: space-between; align-items: center; }
 .nav-btn { background: #3498db; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
 .current-period { font-weight: bold; color: #2c3e50; text-transform: capitalize; }
+/* --- ADAPTARE DARK MODE --- */
+:global(body.dark-mode) .time-navigator,
+:global(body.dark-mode) .nav-group { 
+  background-color: #16213e; 
+  border: 1px solid #0f3460; 
+}
+:global(body.dark-mode) .date-display, 
+:global(body.dark-mode) .time-navigator button { 
+  color: #f1f1f1; 
+}
+:global(body.dark-mode) .time-navigator button.active { 
+  background-color: #3498db; 
+  color: white; 
+}
+:global(body.dark-mode) .time-navigator button:hover:not(.active) { 
+  background-color: #0f3460; 
+}
 </style>
