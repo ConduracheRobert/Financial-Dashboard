@@ -13,11 +13,6 @@
         <div class="chart-header">
           <h3>{{ chartTitle }}</h3>
           
-          <div v-if="showToggle" class="chart-toggle">
-            <button :class="{ active: chartView === 'overview' }" @click="chartView = 'overview'">⚖️ {{ t.balance }}</button>
-            <button :class="{ active: chartView === 'expense' }" @click="chartView = 'expense'">📉 {{ t.expenses }}</button>
-            <button :class="{ active: chartView === 'income' }" @click="chartView = 'income'">📈 {{ t.incomes }}</button>
-          </div>
         </div>
         
         <div v-if="hasDataToChart" class="chart-wrapper">

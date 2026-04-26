@@ -74,13 +74,18 @@
         />
 
         <div class="transactions-section">
-          <h3>{{ t.latestTransactions }}</h3>
+          <div class="list-header">
+      <h3>{{ t.latestTransactions }}</h3>
+      <button @click="exportCSV" class="export-btn">
+        {{ t.locale === 'ro-RO' ? '📥 Descarcă CSV' : '📥 Export CSV' }}
+      </button>
+    </div>
           <TransactionFilters 
             v-model:searchQuery="searchQuery"
             v-model:selectedCategory="selectedCategory"
           />
           <TransactionList 
-  :transactions="transactions" 
+  :transactions="displayListTransactions" 
   @delete-transaction="handleDeleteTransaction" 
   @edit-transaction="openEditModal" 
 />
@@ -88,7 +93,7 @@
       </main>
 
       <button class="fab-button" @click="openNewModal" title="Adaugă Tranzacție">+</button>
-     />
+    
     </div>
 
  <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
@@ -172,7 +177,18 @@ const handleLogin = async () => {
 
 
 const handleLogout = async () => {
-  await signOut(auth)
+  try {
+    // 1. Încercăm să dăm afară de la Firebase (dacă e cazul)
+    await signOut(auth)
+  } catch (error) {
+    console.log("Nu era nimeni logat în Firebase (probabil vizitator)");
+  } finally {
+    // 2. REPARAȚIA CRITICĂ: Forțăm utilizatorul să dispară din memoria aplicației
+    user.value = null
+    
+    // Opțional: Dacă folosești localStorage pentru a ține minte guest-ul, șterge-l și pe ăla
+    localStorage.removeItem('guest_user') 
+  }
 }
 // --- LOGICĂ PENTRU VIZITATOR (GUEST MODE) ---
 const continueAsGuest = () => {
@@ -203,6 +219,7 @@ const openEditModal = (item) => {
   transactionToEdit.value = item // Memorăm tranzacția pe care am dat click
   isModalOpen.value = true       // Deschidem popup-ul
 }
+
 // --- LOGICĂ TRANZACȚII ---
 const handleSaveTransaction = async (transaction) => {
   if (user.value.uid === 'local_guest') {
@@ -210,7 +227,14 @@ const handleSaveTransaction = async (transaction) => {
     transactions.value.push(transaction)
     localStorage.setItem('guest_transactions', JSON.stringify(transactions.value))
   } else {
-    await addDoc(collection(db, 'transactions'), { ...data, uid: user.value.uid })
+    // Creăm o copie a datelor pe care vrem să le salvăm
+    const dataToSave = { ...transaction, uid: user.value.uid }
+    
+    // Ștergem câmpul 'id' din pachet ca să nu mai comenteze Firebase
+    delete dataToSave.id 
+
+    // Trimitem pachetul curat!
+    await addDoc(collection(db, 'transactions'), dataToSave)
   }
 }
 // --- INTERNAȚIONALIZARE (LIMBĂ) ---
@@ -301,8 +325,14 @@ provide('t', t)
 
 // NOU: Funcție care salvează și închide automat popup-ul
 const handleSaveAndClose = async (data) => {
-  await handleSaveTransaction(data)
-  isModalOpen.value = false // Închide modalul după succes
+  try {
+    await handleSaveTransaction(data)
+    isModalOpen.value = false 
+  } catch (error) {
+    console.error("EROARE LA SALVAREA ÎN FIREBASE:", error)
+    alert("Atenție: Firebase a respins adăugarea! Apasă F12 (sau Inspect) și uită-te în fila Console ca să vezi de ce.")
+    isModalOpen.value = false // Închide fereastra chiar dacă dă eroare, ca să nu rămână blocată pe ecran
+  }
 }
 
 const handleDeleteTransaction = async (id) => {
@@ -312,6 +342,9 @@ const handleDeleteTransaction = async (id) => {
 const handleRates = (rates) => { globalRates.value = rates }
 
 // --- CONDUCTE DE DATE ---
+
+
+
 const baseFilteredTransactions = computed(() => {
   const refDate = new Date(referenceDate.value)
   let startDate, endDate
@@ -335,9 +368,7 @@ const baseFilteredTransactions = computed(() => {
   return transactions.value.filter(t => {
     const tDate = new Date(t.date)
     const isInRange = tDate >= startDate && tDate <= endDate
-    const matchesSearch = t.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesCategory = selectedCategory.value === '' || t.category === selectedCategory.value
-    return isInRange && matchesSearch && matchesCategory
+    return isInRange 
   })
 })
 
@@ -352,11 +383,53 @@ const dashboardTransactions = computed(() => {
 
 const displayListTransactions = computed(() => {
   return dashboardTransactions.value.filter(t => {
-    if (activeCardFilter.value === 'income') return t.amount > 0
-    if (activeCardFilter.value === 'expense') return t.amount < 0
-    return true 
+    // 1. Filtrul pentru Venit/Cheltuială (când dai click pe carduri)
+    if (activeCardFilter.value === 'income' && t.amount < 0) return false
+    if (activeCardFilter.value === 'expense' && t.amount > 0) return false
+
+    // 2. Filtrul din bara de căutare
+    const matchesSearch = t.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    
+    // 3. Filtrul din meniul de categorii
+    const matchesCategory = selectedCategory.value === '' || t.category === selectedCategory.value
+
+    return matchesSearch && matchesCategory
   })
 })
+// --- FUNCȚIA DE EXPORT EXCEL/CSV ---
+const exportCSV = () => {
+  const BOM = "\uFEFF"
+  const headers = t.value.locale === 'ro-RO' 
+    ? "Data,Nume Tranzactie,Categorie,Suma,Tip\n"
+    : "Date,Transaction Name,Category,Amount,Type\n"
+  
+  let csvContent = BOM + headers
+
+  // AICI ERA PROBLEMA: am corectat din filteredTransactions în transactions
+  displayListTransactions.value.forEach(item => {
+    const date = item.date
+    const name = `"${item.name.replace(/"/g, '""')}"`
+    const category = t.value.catMap[item.category] || item.category
+    
+    let type = ''
+    if (t.value.locale === 'ro-RO') {
+      type = item.amount > 0 ? 'Venit' : 'Cheltuiala'
+    } else {
+      type = item.amount > 0 ? 'Income' : 'Expense'
+    }
+
+    csvContent += `${date},${name},${category},${item.amount},${type}\n`
+  })
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = t.value.locale === 'ro-RO' ? "Istoric_FinDash.csv" : "FinDash_History.csv"
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
 </script>
 
 <style scoped>
@@ -701,5 +774,46 @@ body.dark-mode .login-box { background: #16213e; box-shadow: 0 10px 25px rgba(0,
 body.dark-mode .login-box h2 { color: #f1f1f1; }
 body.dark-mode .google-btn { background: #2c3e50; color: #fff; border-color: #4a627a; }
 body.dark-mode .google-btn:hover { background: #34495e; }
+
+/* --- STIL PENTRU BUTONUL DE EXPORT --- */
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.list-header h3 { margin: 0; }
+
+.export-btn {
+  background-color: #f1f3f5;
+  color: #2c3e50;
+  border: 1px solid #dcdde1;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.export-btn:hover {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+  box-shadow: 0 4px 10px rgba(52, 152, 219, 0.2);
+}
+
+/* Dark Mode pentru Export */
+body.dark-mode .export-btn {
+  background-color: #1a1a2e;
+  color: #a5b1c2;
+  border-color: #0f3460;
+}
+body.dark-mode .export-btn:hover {
+  background-color: #3498db;
+  color: white;
+}
 
 </style>

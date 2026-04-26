@@ -24,8 +24,8 @@ import { computed, inject } from 'vue'
 const t = inject('t')
 
 const props = defineProps({
-  viewUnit: { type: String, default: 'month' },
-  referenceDate: { type: String, required: true }
+  referenceDate: { type: String, required: true },
+  viewUnit: { type: String, required: true }
 })
 
 const emit = defineEmits(['update:viewUnit', 'update:referenceDate'])
@@ -35,13 +35,19 @@ const setUnit = (unit) => {
 }
 
 const shiftTime = (direction) => {
-  const d = new Date(props.referenceDate)
+  const [year, month, day] = props.referenceDate.split('-').map(Number)
+  const d = new Date(year, month - 1, day)
+  
   if (props.viewUnit === 'day') d.setDate(d.getDate() + direction)
   else if (props.viewUnit === 'week') d.setDate(d.getDate() + direction * 7)
   else if (props.viewUnit === 'month') d.setMonth(d.getMonth() + direction)
   else if (props.viewUnit === 'year') d.setFullYear(d.getFullYear() + direction)
   
-  emit('update:referenceDate', d.toISOString().split('T')[0])
+  const newYear = d.getFullYear()
+  const newMonth = String(d.getMonth() + 1).padStart(2, '0')
+  const newDay = String(d.getDate()).padStart(2, '0')
+  
+  emit('update:referenceDate', `${newYear}-${newMonth}-${newDay}`)
 }
 
 const displayDate = computed(() => {
