@@ -1,10 +1,17 @@
 <template>
-  <div id="app-root">
-    <div v-if="!user" class="auth-screen">
-      <div class="auth-card">
-        <h2>💰 Gestor Financiar</h2>
-        <p>Conectează-te pentru a-ți gestiona bugetul</p>
-        <button @click="handleLogin" class="login-btn">Conectare cu Google</button>
+  <div v-if="!user" class="login-screen">
+      <div class="login-box">
+        <h2>💰 Financial Dashboard</h2>
+        <p>Conectează-te pentru a-ți salva datele în cloud, sau testează aplicația local.</p>
+        
+        <button @click="handleLogin" class="google-btn">
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/google/google-original.svg" alt="Google" class="google-icon" />
+  Conectare cu Google
+</button>
+        
+        <button @click="continueAsGuest" class="guest-btn">
+          👤 Continuă fără cont
+        </button>
       </div>
     </div>
 
@@ -17,7 +24,9 @@
         </div>
         <div class="header-right">
           <button @click="toggleLanguage" class="lang-btn" :title="currentLang === 'ro' ? 'Switch to English' : 'Schimbă în Română'">
-            {{ currentLang === 'ro' ? '🇬🇧' : '🇷🇴' }}
+            <img v-if="currentLang === 'ro'" src="https://flagcdn.com/w40/ro.png" alt="RO" class="flag-icon" />
+            <img v-else src="https://flagcdn.com/w40/gb.png" alt="EN" class="flag-icon" />
+            <span class="lang-text">{{ currentLang === 'ro' ? 'RO' : 'EN' }}</span>
           </button>
           
           <button @click="toggleTheme" class="theme-btn" :title="isDarkMode ? 'Treci la modul luminos' : 'Treci la modul întunecat'">
@@ -65,37 +74,42 @@
         />
 
         <div class="transactions-section">
-          <h3>Ultimele tranzacții</h3>
+          <h3>{{ t.latestTransactions }}</h3>
           <TransactionFilters 
             v-model:searchQuery="searchQuery"
             v-model:selectedCategory="selectedCategory"
           />
           <TransactionList 
-            :transactions="displayListTransactions" 
-            @delete-transaction="handleDeleteTransaction"
-            @save-transaction="handleSaveTransaction"
-          />
+  :transactions="transactions" 
+  @delete-transaction="handleDeleteTransaction" 
+  @edit-transaction="openEditModal" 
+/>
         </div>
       </main>
 
-      <button class="fab-button" @click="isModalOpen = true" title="Adaugă Tranzacție">+</button>
-
-      <div class="modal-overlay" v-if="isModalOpen" @click.self="isModalOpen = false">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Adaugă o tranzacție nouă</h3>
-            <button class="close-btn" @click="isModalOpen = false">×</button>
-          </div>
-          <TransactionForm @add-transaction="handleSaveAndClose" />
-        </div>
-      </div>
-
+      <button class="fab-button" @click="openNewModal" title="Adaugă Tranzacție">+</button>
+     />
     </div>
-  </div>
+
+ <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ transactionToEdit ? (t.locale === 'ro-RO' ? '✏️ Editează Tranzacția' : '✏️ Edit Transaction') : t.addTransactionTitle }}</h3>
+          <button class="close-btn" @click="isModalOpen = false">×</button>
+        </div>
+        
+        <TransactionForm 
+          :transactionToEdit="transactionToEdit" 
+          @add-transaction="handleSaveAndClose" 
+        />
+        
+      </div>
+    </div>
+
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, provide } from 'vue'
 import { db, auth } from './firebase'
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth'
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore'
@@ -156,14 +170,45 @@ const handleLogin = async () => {
   await signInWithPopup(auth, provider)
 }
 
+
 const handleLogout = async () => {
   await signOut(auth)
 }
+// --- LOGICĂ PENTRU VIZITATOR (GUEST MODE) ---
+const continueAsGuest = () => {
+  // Creăm un utilizator fals pentru a debloca interfața
+  user.value = {
+    uid: 'local_guest',
+    email: 'Vizitator (Mod Local)',
+    isGuest: true
+  }
+  
+  // Încărcăm tranzacțiile din memoria locală a browserului (dacă există)
+  const savedLocal = localStorage.getItem('guest_transactions')
+  if (savedLocal) {
+    transactions.value = JSON.parse(savedLocal)
+  } else {
+    transactions.value = []
+  }
+}
+// --- LOGICĂ PENTRU EDITARE ---
+const transactionToEdit = ref(null)
 
+const openNewModal = () => {
+  transactionToEdit.value = null // Resetăm memoria
+  isModalOpen.value = true       // Deschidem popup-ul
+}
+
+const openEditModal = (item) => {
+  transactionToEdit.value = item // Memorăm tranzacția pe care am dat click
+  isModalOpen.value = true       // Deschidem popup-ul
+}
 // --- LOGICĂ TRANZACȚII ---
-const handleSaveTransaction = async (data) => {
-  if (data.id) {
-    await updateDoc(doc(db, 'transactions', data.id), data)
+const handleSaveTransaction = async (transaction) => {
+  if (user.value.uid === 'local_guest') {
+    // Dacă e vizitator, salvăm doar local
+    transactions.value.push(transaction)
+    localStorage.setItem('guest_transactions', JSON.stringify(transactions.value))
   } else {
     await addDoc(collection(db, 'transactions'), { ...data, uid: user.value.uid })
   }
@@ -177,24 +222,82 @@ const toggleLanguage = () => {
   localStorage.setItem('app_lang', currentLang.value)
 }
 
-// Dicționarul aplicației noastre pentru interfața principală
+// --- DICȚIONARUL UNIVERSAL (i18n) COMPLET ---
 const t = computed(() => {
+  // Masca pentru baza de date
+  const baseMap = {
+    'Mâncare': 'Mâncare', 'Transport': 'Transport', 'Facturi & Utilități': 'Facturi & Utilități',
+    'Cumpărături': 'Cumpărături', 'Divertisment': 'Divertisment', 'Sănătate': 'Sănătate',
+    'Educație': 'Educație', 'Casă': 'Casă', 'Salariu': 'Salariu', 'Bonus': 'Bonus',
+    'Investiții': 'Investiții', 'Cadouri primite': 'Cadouri primite', 'Vânzări': 'Vânzări', 'Altele': 'Altele'
+  }
+  const enMap = {
+    'Mâncare': 'Food', 'Transport': 'Transport', 'Facturi & Utilități': 'Bills & Utilities',
+    'Cumpărături': 'Shopping', 'Divertisment': 'Entertainment', 'Sănătate': 'Health',
+    'Educație': 'Education', 'Casă': 'Home', 'Salariu': 'Salary', 'Bonus': 'Bonus',
+    'Investiții': 'Investments', 'Cadouri primite': 'Gifts Received', 'Vânzări': 'Sales', 'Altele': 'Others'
+  }
+
   return currentLang.value === 'ro' ? {
-    dashboard: 'Dashboard',
-    history: 'Istoric Complet',
-    settings: 'Setări',
-    logout: 'Ieșire',
-    menu: 'Meniu',
-    addTransaction: 'Adaugă o tranzacție nouă'
+    locale: 'ro-RO',
+    dashboard: 'Dashboard', history: 'Istoric Complet', settings: 'Setări', logout: 'Ieșire', menu: 'Meniu',
+    latestTransactions: 'Ultimele tranzacții',
+    currentBalance: 'Sold Curent', totalIncome: 'Total Venituri', totalExpense: 'Total Cheltuieli',
+    globalRate: 'Curs Valutar', otherCurrencies: 'Alte monede (în',
+    noCategory: 'Nicio categorie selectată', selectCategory: 'Apasă pe un card de sus pentru a genera analiza vizuală.',
+    balance: 'Balanță', expenses: 'Cheltuieli', incomes: 'Venituri',
+    emptyHistory: 'Nu există tranzacții în această perioadă.',
+    searchTrans: 'Caută o tranzacție...', allCategories: 'Toate categoriile',
+    transName: 'Nume Tranzacție', category: 'Categorie', amount: 'Sumă', date: 'Data',
+    day: 'Zi', week: 'Săpt', month: 'Lună', year: 'An',
+    
+    // Cuvinte Noi pentru Formular
+    addTransactionTitle: 'Adaugă o tranzacție nouă', 
+    addIncomeBtn: 'Adaugă Venit', 
+    addExpenseBtn: 'Adaugă Cheltuială',
+    incomeToggle: 'Venit', 
+    expenseToggle: 'Cheltuială',
+    placeholderExpense: 'Ex: Cafea, Chirie, Supermarket...',
+    placeholderIncome: 'Ex: Salariu, Bonus, Bani primiți...',
+    selectCategoryOpt: 'Selectează o categorie...',
+    validationName: 'Te rog să introduci un nume pentru tranzacție.',
+    validationAmount: 'Suma introdusă trebuie să fie mai mare decât 0.',
+    validationCategory: 'Te rog să selectezi o categorie.',
+    validationDate: 'Eroare temporală: Nu poți adăuga o tranzacție din viitor!',
+    
+    catMap: baseMap // Aici trimitem masca
   } : {
-    dashboard: 'Dashboard',
-    history: 'Full History',
-    settings: 'Settings',
-    logout: 'Logout',
-    menu: 'Menu',
-    addTransaction: 'Add a new transaction'
+    locale: 'en-US',
+    dashboard: 'Dashboard', history: 'Full History', settings: 'Settings', logout: 'Logout', menu: 'Menu',
+    latestTransactions: 'Latest Transactions',
+    currentBalance: 'Current Balance', totalIncome: 'Total Income', totalExpense: 'Total Expenses',
+    globalRate: 'Exchange Rate', otherCurrencies: 'Other currencies (in',
+    noCategory: 'No category selected', selectCategory: 'Click a top card to generate visual analysis.',
+    balance: 'Balance', expenses: 'Expenses', incomes: 'Incomes',
+    emptyHistory: 'No transactions in this period.',
+    searchTrans: 'Search transaction...', allCategories: 'All categories',
+    transName: 'Transaction Name', category: 'Category', amount: 'Amount', date: 'Date',
+    day: 'Day', week: 'Week', month: 'Month', year: 'Year',
+    
+    // Cuvinte Noi pentru Formular (ENG)
+    addTransactionTitle: 'Add new transaction', 
+    addIncomeBtn: 'Add Income', 
+    addExpenseBtn: 'Add Expense',
+    incomeToggle: 'Income', 
+    expenseToggle: 'Expense',
+    placeholderExpense: 'Ex: Coffee, Rent, Groceries...',
+    placeholderIncome: 'Ex: Salary, Bonus, Received money...',
+    selectCategoryOpt: 'Select a category...',
+    validationName: 'Please enter a transaction name.',
+    validationAmount: 'The amount must be greater than 0.',
+    validationCategory: 'Please select a category.',
+    validationDate: 'Temporal error: Cannot add a transaction from the future!',
+    
+    catMap: enMap // Aici trimitem masca în engleză
   }
 })
+// Aceasta este „magia” care trimite dicționarul invizibil către TOATE celelalte componente!
+provide('t', t)
 
 // NOU: Funcție care salvează și închide automat popup-ul
 const handleSaveAndClose = async (data) => {
@@ -379,7 +482,7 @@ body.dark-mode .transaction-item:hover {
 </style>
 <style>
 /* =========================================
-   DARK MODE GLOBAL (Varianta Blindată 100%)
+   DARK MODE GLOBAL (Varianta Blindată 100% V2)
    ========================================= */
 
 /* 1. Butonul cu Soarele și Butonul de Limbă - perfect transparente */
@@ -396,39 +499,50 @@ body.dark-mode .transaction-item:hover {
 .theme-btn:hover, .lang-btn:hover {
   transform: scale(1.1);
 }
+.lang-btn { display: flex; align-items: center; gap: 8px; }
+.flag-icon { width: 24px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.lang-text { font-size: 14px; font-weight: bold; color: #34495e; }
+body.dark-mode .lang-text { color: #f1f1f1; }
 
-/* 2. REPARAȚIE TOTALĂ PENTRU TIME NAVIGATOR (Bara albă) */
-body.dark-mode .time-navigator,
-body.dark-mode .time-navigator div,
-body.dark-mode .time-navigator section,
-body.dark-mode .time-navigator nav { 
-  background-color: #16213e !important; 
-  border-color: #0f3460 !important; 
+/* 2. CONTAINERE PRINCIPALE (Navigator, Grafic, Item din Listă) */
+body.dark-mode .time-navigator-container,
+body.dark-mode .chart-container,
+body.dark-mode .transaction-item {
+  background-color: #16213e !important;
+  border-color: #0f3460 !important;
 }
 
-/* Butoanele normale din Time Navigator (Zi, Săpt, An) */
-body.dark-mode .time-navigator button {
+/* 3. ZONE GRI ȘI MENIURI (Empty States, Toggle Grafic, Filtre Timp) */
+body.dark-mode .empty-state,
+body.dark-mode .empty-list,
+body.dark-mode .no-data-message,
+body.dark-mode .chart-toggle,
+body.dark-mode .time-filters,
+body.dark-mode .nav-group {
   background-color: #1a1a2e !important;
-  color: #f1f1f1 !important;
-  border: 1px solid #0f3460 !important;
+  border-color: #0f3460 !important;
+  color: #a5b1c2 !important;
 }
 
-/* Butonul ACTIV din Time Navigator (Lună) și Săgețile */
-body.dark-mode .time-navigator button.active,
-body.dark-mode .time-navigator button.icon-btn {
+/* 4. BUTOANE (Navigator Timp, Săgeți, Butoane Grafic) */
+body.dark-mode .time-filters button,
+body.dark-mode .chart-toggle button {
+  color: #f1f1f1 !important;
+}
+body.dark-mode .time-filters button.active,
+body.dark-mode .chart-toggle button.active {
   background-color: #3498db !important;
   color: white !important;
-  border-color: #3498db !important;
+}
+body.dark-mode .icon-btn {
+  background-color: #1a1a2e !important;
+  color: #f1f1f1 !important;
+}
+body.dark-mode .icon-btn:hover { 
+  background-color: #0f3460 !important; 
 }
 
-/* Textul cu data (ex: Aprilie 2026) */
-body.dark-mode .date-display,
-body.dark-mode .time-navigator span { 
-  color: #f1f1f1 !important; 
-  background-color: transparent !important;
-}
-
-/* 3. Input-uri și Select-uri (Filtre) */
+/* 5. INPUT-URI ȘI SELECT-URI (Filtre) */
 body.dark-mode input,
 body.dark-mode select { 
   background-color: #1a1a2e !important; 
@@ -437,21 +551,155 @@ body.dark-mode select {
 }
 body.dark-mode input::placeholder { color: #7f8c8d !important; }
 
-/* 4. Lista de Tranzacții */
-body.dark-mode .transaction-list,
-body.dark-mode .list-container,
-body.dark-mode .empty-state { 
-  background-color: transparent !important; 
-  border: none !important; 
+/* 6. CORECTARE TEXTE NEGRE (Titluri, Nume Tranzacții, Data) */
+body.dark-mode .date-display,
+body.dark-mode .empty-state h3,
+body.dark-mode .empty-state p,
+body.dark-mode .empty-list p,
+body.dark-mode .no-data-message p,
+body.dark-mode h3,
+body.dark-mode .name {
+  color: #f1f1f1 !important;
 }
-body.dark-mode .transaction-item { 
-  background-color: #1a1a2e !important; 
-  border: 1px solid #0f3460 !important; 
-}
-body.dark-mode .transaction-item:hover { background-color: #0f3460 !important; }
 
-/* 5. Texte */
-body.dark-mode .transaction-item .name,
-body.dark-mode .transaction-list h3,
-body.dark-mode .empty-state p { color: #f1f1f1 !important; }
+/* Hover pentru lista de tranzacții */
+body.dark-mode .transaction-item:hover { 
+  background-color: #0f3460 !important; 
+}
+/* =========================================
+   REPARAȚIE POPUP (Fereastra plutitoare)
+   ========================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+
+.modal-header h3 { margin: 0; color: #2c3e50; }
+.close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #7f8c8d; }
+
+/* Dark mode specific pentru rama Modalului */
+:global(body.dark-mode) .modal-content { background: #16213e; border: 1px solid #0f3460; }
+:global(body.dark-mode) .modal-header { border-bottom-color: #0f3460; }
+:global(body.dark-mode) .modal-header h3 { color: #f1f1f1; }
+body, #app, button, input, select, textarea, h1, h2, h3, p, span, div {
+  font-family: "Avenir", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif !important;
+}
+
+/* =========================================
+   REPARAȚIE POPUP & FORMULAR (BLINDAT 100%)
+   ========================================= */
+
+/* 1. Ridicăm Popup-ul deasupra la tot */
+.modal-overlay {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 99999 !important; /* Nivel maxim */
+  backdrop-filter: blur(5px) !important;
+}
+
+.modal-content {
+  background: white !important;
+  padding: 25px !important;
+  border-radius: 15px !important;
+  width: 90% !important;
+  max-width: 500px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+  position: relative !important;
+}
+
+.modal-header {
+  display: flex !important; justify-content: space-between !important; align-items: center !important;
+  margin-bottom: 20px !important; border-bottom: 1px solid #eee !important; padding-bottom: 15px !important;
+}
+
+.modal-header h3 { margin: 0 !important; color: #2c3e50 !important; }
+.close-btn { background: none !important; border: none !important; font-size: 24px !important; cursor: pointer !important; color: #7f8c8d !important; }
+
+/* 2. DARK MODE Pentru Fereastră */
+body.dark-mode .modal-content { background: #16213e !important; border: 1px solid #0f3460 !important; }
+body.dark-mode .modal-header { border-bottom-color: #0f3460 !important; }
+body.dark-mode .modal-header h3 { color: #f1f1f1 !important; }
+
+/* 3. DARK MODE Pentru Butoanele Formularului (Fără fundal alb!) */
+body.dark-mode .smart-form .type-toggle { background-color: #0f3460 !important; border: 1px solid #0f3460 !important;}
+body.dark-mode .smart-form .toggle-btn { color: #a5b1c2 !important; background: transparent !important; }
+body.dark-mode .smart-form .toggle-btn.income.active { background-color: #1a1a2e !important; color: #2ecc71 !important; box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important; }
+body.dark-mode .smart-form .toggle-btn.expense.active { background-color: #1a1a2e !important; color: #e74c3c !important; box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important; }
+body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
+
+/* =========================================
+   REPARAȚIE FONT (Varianta Forțată 100%)
+   ========================================= */
+.modal-overlay,
+.modal-content,
+.modal-content *,
+.smart-form input,
+.smart-form select,
+.smart-form button,
+.smart-form label {
+  font-family: "Avenir", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif !important;
+}
+/* --- STILURI PENTRU ECRANUL DE LOGIN --- */
+.login-screen {
+  display: flex; justify-content: center; align-items: center;
+  height: 100vh; background: #f4f7f6;
+}
+.login-box {
+  background: white; padding: 40px; border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
+  max-width: 400px; width: 90%; display: flex; flex-direction: column; gap: 15px;
+}
+.login-box h2 { margin: 0; color: #2c3e50; font-size: 24px; }
+.login-box p { color: #7f8c8d; font-size: 14px; margin-bottom: 10px; line-height: 1.5; }
+
+.google-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #ffffff; color: #3c4043; border: 1px solid #dadce0;
+  padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px;
+}
+.google-btn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.google-icon { width: 20px; height: 20px; }
+
+/* Butonul de Vizitator - Fără fundal, doar contur elegant */
+.guest-btn {
+  background: transparent; color: #3498db; border: 2px solid #3498db;
+  padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px;
+}
+.guest-btn:hover { background: rgba(52, 152, 219, 0.1); }
+
+/* Dark mode pentru login */
+body.dark-mode .login-screen { background: #1a1a2e; }
+body.dark-mode .login-box { background: #16213e; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+body.dark-mode .login-box h2 { color: #f1f1f1; }
+body.dark-mode .google-btn { background: #2c3e50; color: #fff; border-color: #4a627a; }
+body.dark-mode .google-btn:hover { background: #34495e; }
+
 </style>

@@ -1,67 +1,36 @@
 <template>
-  <div class="filters-container">
-    <div class="filter-group search">
-      <input 
-        type="text" 
-        :value="searchQuery" 
-        @input="$emit('update:searchQuery', $event.target.value)"
-        placeholder="Caută o tranzacție..."
-      />
-    </div>
-    
-    <div class="filter-group select">
-      <select 
-        :value="selectedCategory" 
-        @change="$emit('update:selectedCategory', $event.target.value)"
-      >
-        <option value="">Toate categoriile</option>
-        <option value="Salariu">Salariu / Venit</option>
-        <option value="Mâncare">Mâncare & Cumpărături</option>
-        <option value="Facturi">Facturi & Utilități</option>
-        <option value="Transport">Transport</option>
-        <option value="Divertisment">Divertisment</option>
-        <option value="Altele">Altele</option>
-      </select>
-    </div>
+  <div class="transaction-filters">
+    <input 
+      type="text" 
+      :value="searchQuery" 
+      @input="$emit('update:searchQuery', $event.target.value)" 
+      :placeholder="t.searchTrans"
+      class="search-input"
+    />
+    <select 
+      :value="selectedCategory" 
+      @change="$emit('update:selectedCategory', $event.target.value)"
+      class="category-select"
+    >
+      <option value="">-- {{ t.allCategories }} --</option>
+      <option v-for="(label, key) in t.catMap" :key="key" :value="key">
+        {{ label }}
+      </option>
+    </select>
   </div>
 </template>
 
 <script setup>
-// Definim proprietățile primite și evenimentele emise pentru a permite v-model bidirecțional din App.vue
+import { inject } from 'vue'
+const t = inject('t')
 defineProps(['searchQuery', 'selectedCategory'])
 defineEmits(['update:searchQuery', 'update:selectedCategory'])
 </script>
 
 <style scoped>
-.filters-container {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-.filter-group { flex: 1; }
-input, select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-input:focus, select:focus {
-  outline: none;
-  border-color: #3498db;
-}
-@media (max-width: 400px) {
-  .filters-container { flex-direction: column; }
-}
-/* --- ADAPTARE DARK MODE --- */
-:global(body.dark-mode) input,
-:global(body.dark-mode) select {
-  background-color: #1a1a2e;
-  color: #f1f1f1;
-  border: 1px solid #0f3460;
-}
-:global(body.dark-mode) input::placeholder { 
-  color: #7f8c8d; 
-}
+.transaction-filters { display: flex; gap: 15px; margin-bottom: 20px; }
+.search-input { flex: 2; padding: 12px 15px; border: 1px solid #dcdde1; border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s; }
+.category-select { flex: 1; padding: 12px 15px; border: 1px solid #dcdde1; border-radius: 8px; font-size: 14px; outline: none; cursor: pointer; }
+.search-input:focus, .category-select:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+@media (max-width: 600px) { .transaction-filters { flex-direction: column; } }
 </style>

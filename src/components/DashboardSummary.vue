@@ -5,11 +5,11 @@
       class="summary-card balance filter-card" 
       :class="{ 'active-filter': currentFilter === 'all' }" 
       @click="toggleFilter('all')"
-      title="Afișează toate tranzacțiile"
+      :title="t.dashboard"
     >
       <div class="icon">💳</div>
       <div class="details">
-        <span class="label">Sold Curent</span>
+        <span class="label">{{ t.currentBalance }}</span>
         <span class="value">{{ currentBalance.toFixed(2) }} <small>{{ currency }}</small></span>
       </div>
     </div>
@@ -18,11 +18,10 @@
       class="summary-card income filter-card" 
       :class="{ 'active-filter': currentFilter === 'income' }" 
       @click="toggleFilter('income')"
-      title="Afișează doar veniturile"
     >
       <div class="icon">📈</div>
       <div class="details">
-        <span class="label">Total Venituri</span>
+        <span class="label">{{ t.totalIncome }}</span>
         <span class="value">+{{ totalIncome.toFixed(2) }} <small>{{ currency }}</small></span>
       </div>
     </div>
@@ -31,11 +30,10 @@
       class="summary-card expense filter-card" 
       :class="{ 'active-filter': currentFilter === 'expense' }" 
       @click="toggleFilter('expense')"
-      title="Afișează doar cheltuielile"
     >
       <div class="icon">📉</div>
       <div class="details">
-        <span class="label">Total Cheltuieli</span>
+        <span class="label">{{ t.totalExpense }}</span>
         <span class="value">{{ Math.abs(totalExpense).toFixed(2) }} <small>{{ currency }}</small></span>
       </div>
     </div>
@@ -48,9 +46,9 @@
     >
       <div class="icon">💱</div>
       <div class="details">
-        <span class="label">Curs Global (Live)</span>
+        <span class="label">{{ t.globalRate }}</span>
         <div class="rates-wrapper">
-          <span v-if="isLoading" class="loading-text">Se încarcă...</span>
+          <span v-if="isLoading" class="loading-text">...</span>
           <template v-else>
             <span v-if="currency !== 'EUR'" class="currency-line">1 € = <strong>{{ getRate('EUR') }}</strong> {{ currency }}</span>
             <span v-if="currency !== 'USD'" class="currency-line">1 $ = <strong>{{ getRate('USD') }}</strong> {{ currency }}</span>
@@ -65,7 +63,7 @@
       class="floating-bubble" 
       :style="{ top: mouseY + 'px', left: mouseX + 'px' }"
     >
-      <h4>🌍 Alte monede (în {{ currency }}):</h4>
+      <h4>🌍 {{ t.otherCurrencies }} {{ currency }}):</h4>
       <div class="bubble-grid">
         <span class="bubble-line">🇬🇧 1 £ = <strong>{{ getRate('GBP') }}</strong> {{ currency }}</span>
         <span class="bubble-line">🇨🇭 1 CHF = <strong>{{ getRate('CHF') }}</strong> {{ currency }}</span>
@@ -82,7 +80,10 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, inject } from 'vue'
+
+// Injectăm dicționarul t trimis din App.vue
+const t = inject('t')
 
 const props = defineProps({
   transactions: Array,
@@ -95,36 +96,25 @@ const totalIncome = computed(() => props.transactions.filter(t => t.amount > 0).
 const totalExpense = computed(() => props.transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0))
 const currentBalance = computed(() => totalIncome.value + totalExpense.value)
 
-// --- LOGICA DE SELECȚIE (CLICK EXTERIOR) ---
 const containerRef = ref(null)
-
 const toggleFilter = (type) => {
-  if (props.currentFilter === type) {
-    emit('filter-changed', null) 
-  } else {
-    emit('filter-changed', type)
-  }
+  if (props.currentFilter === type) emit('filter-changed', null) 
+  else emit('filter-changed', type)
 }
-
 const handleClickOutside = (event) => {
   if (containerRef.value && !containerRef.value.contains(event.target)) {
     if (props.currentFilter !== null) emit('filter-changed', null)
   }
 }
 
-// --- LOGICA CURS VALUTAR DINAMIC ---
 const apiRates = ref(null)
 const isLoading = ref(true)
-
-// FORMULA MAGICĂ: Calculează cât valorează 1 unitate din "Moneda Țintă" raportat la "Moneda Activă"
 const getRate = (targetCurrency) => {
   if (!apiRates.value) return '0.0000'
   const baseValue = apiRates.value[props.currency] || 1 
   const targetValue = apiRates.value[targetCurrency] || 1 
   return (baseValue / targetValue).toFixed(4)
 }
-
-// Special pentru forinți (Afișăm pentru 100 de unități)
 const getRate100 = (targetCurrency) => {
   if (!apiRates.value) return '0.0000'
   const baseValue = apiRates.value[props.currency] || 1
@@ -137,7 +127,6 @@ const mouseX = ref(0)
 const mouseY = ref(0)
 const trackMouse = (event) => { mouseX.value = event.clientX + 15; mouseY.value = event.clientY + 15 }
 
-// Trimitem cursurile de bază (RON) către App.vue pentru a putea filtra tranzacțiile corect
 const sendRatesToApp = () => { 
   if (apiRates.value) {
     emit('rates-loaded', { 
@@ -149,11 +138,8 @@ const sendRatesToApp = () => {
 
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
-
   const today = new Date().toISOString().split('T')[0]
-  // Am schimbat numele cache-ului la V4 pentru a forța descărcarea noii structuri de date
   const cachedData = localStorage.getItem('exchangeRatesGlobalV4')
-  
   if (cachedData) {
     const parsedData = JSON.parse(cachedData)
     if (parsedData.date === today && parsedData.rates) {
@@ -163,31 +149,22 @@ onMounted(async () => {
       return 
     }
   }
-
   try {
     const response = await fetch('https://api.exchangerate-api.com/v4/latest/EUR')
     const data = await response.json()
     if (data && data.rates) {
       apiRates.value = data.rates
-      localStorage.setItem('exchangeRatesGlobalV4', JSON.stringify({
-        date: today, 
-        rates: data.rates
-      }))
+      localStorage.setItem('exchangeRatesGlobalV4', JSON.stringify({ date: today, rates: data.rates }))
       sendRatesToApp();
     }
-  } catch (error) { 
-    console.error("Eroare API:", error) 
-  } finally { 
-    isLoading.value = false 
-  }
+  } catch (error) { console.error(error) } finally { isLoading.value = false }
 })
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 </script>
 
 <style scoped>
+/* CSS-ul rămâne neschimbat */
 .summary-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
 .summary-card { display: flex; align-items: center; padding: 20px; border-radius: 12px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); gap: 15px; border: 2px solid transparent; transition: all 0.2s; }
 .filter-card { cursor: pointer; }
@@ -216,9 +193,7 @@ onUnmounted(() => {
 .bubble-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 15px; }
 .bubble-line { font-size: 13px; color: #2c3e50; white-space: nowrap; }
 .bubble-line strong { color: #8e44ad; }
-@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-@media (max-width: 768px) { .summary-container { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 480px) { .summary-container { grid-template-columns: 1fr; } }
+
 body.dark-mode .summary-card { background: #1a1a2e; }
 body.dark-mode .label { color: #a5b1c2; }
 body.dark-mode .value, body.dark-mode .currency-line { color: #f1f1f1; }
