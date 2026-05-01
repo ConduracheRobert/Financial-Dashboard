@@ -566,20 +566,29 @@ const displayListTransactions = computed(() => {
 })
 
 // --- BUGETE COMPUTED PROPERTIES ---
+
+// Cheltuielile userului curent din LUNA CALENDARISTICA CURENTA (independent de TimeNavigator)
+const currentMonthTransactions = computed(() => {
+  const now = new Date()
+  const year  = now.getFullYear()
+  const month = now.getMonth() // 0-indexed
+  return transactions.value.filter(t => {
+    if (t.amount >= 0) return false // ignoram veniturile
+    const d = new Date(t.date)
+    return d.getFullYear() === year && d.getMonth() === month
+  })
+})
+
 const spentByCategory = computed(() => {
   const spent = {}
-  
-  // Inițializează toate categoriile cu 0
-  budgets.value.forEach(b => {
-    spent[b.category] = 0
-  })
-  
-  // Adună cheltuielile din luna curentă
-  baseFilteredTransactions.value.forEach(t => {
-    if (t.amount > 0) { // Doar cheltuielile (nu veniturile)
-      if (!spent[t.category]) spent[t.category] = 0
-      spent[t.category] += t.amount
-    }
+
+  // Initializeaza toate categoriile cu bugete setate la 0
+  budgets.value.forEach(b => { spent[b.category] = 0 })
+
+  // Acumuleaza cheltuielile din luna curenta (valorile sunt deja filtrate ca negative)
+  currentMonthTransactions.value.forEach(t => {
+    if (!spent[t.category]) spent[t.category] = 0
+    spent[t.category] += Math.abs(t.amount)
   })
   
   // LOGICA TOAST ALERT @ 80% și 100%
