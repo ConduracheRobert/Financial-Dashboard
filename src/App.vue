@@ -20,7 +20,7 @@
       <header class="app-header">
         <div class="header-left">
           <button class="hamburger-btn" @click="isSidebarOpen = true">☰</button>
-          <h2>Dashboard</h2>
+          <h2>Financial Dashboard</h2>
         </div>
         <div class="header-right">
           <button @click="toggleLanguage" class="lang-btn" :title="currentLang === 'ro' ? 'Switch to English' : 'Schimbă în Română'">
@@ -171,6 +171,10 @@ const budgets = ref([])
 const alertedBudgets = ref(new Set())
 const lastAlertMonth = ref(new Date().getMonth())
 
+// RECURENTE - State Management
+const recurringTransactions = ref([])
+const isRecurringModalOpen = ref(false)
+
 // NOU: Stări pentru interfața modernă
 const isSidebarOpen = ref(false)
 const isModalOpen = ref(false)
@@ -184,7 +188,7 @@ const closeBudgetModal = () => {
 // --- SISTEM TOAST NOTIFICĂRI ---
 const toasts = ref([])
 const addToast = (message, type = 'info', action = null) => {
-  const durations = { success: 4000, error: 6000, info: 10000 }
+  const durations = { success: 10000, error: 6000, info: 10000 }
   const duration = durations[type] || 4000
   const id = Date.now()
   toasts.value.push({ id, message, type, action })
@@ -221,6 +225,7 @@ onMounted(() => {
     }
   })
   loadBudgets()
+  loadRecurring()
 })
 
 const handleLogin = async () => {
@@ -261,6 +266,7 @@ const continueAsGuest = () => {
   }
   
   loadBudgets()
+  loadRecurring()
 }
 // --- LOGICĂ PENTRU EDITARE ---
 const transactionToEdit = ref(null)
@@ -418,8 +424,8 @@ const handleSaveAndClose = async (data) => {
         const category = data.category
         addToast(
           currentLang.value === 'ro'
-            ? `💡 Ai cheltuit pe ${catLabel}. Vrei să îți setezi un buget pentru ea?`
-            : `💡 You spent on ${catLabel}. Want to set a budget for it?`,
+            ? `💡 Ai cheltuit pe ${catLabel}. Vrei să îți setezi un buget pentru aceasta categorie?`
+            : `💡 You spent on ${catLabel}. Want to set a budget for this category?`,
           'info',
           {
             label: currentLang.value === 'ro' ? 'Setează buget' : 'Set budget',
@@ -538,6 +544,63 @@ const handleDeleteBudget = async (id) => {
       currentLang.value === 'ro' ? '❌ Eroare la ștergere.' : '❌ Delete failed.',
       'error'
     )
+  }
+}
+
+// --- RECURENTE: LOAD, SAVE, DELETE ---
+const loadRecurring = () => {
+  if (!user.value) return
+
+  if (user.value.uid === 'local_guest') {
+    const saved = localStorage.getItem('guest_recurring')
+    recurringTransactions.value = saved ? JSON.parse(saved) : []
+  } else {
+    const q = query(collection(db, 'recurringTransactions'), where('uid', '==', user.value.uid))
+    onSnapshot(q, (snapshot) => {
+      recurringTransactions.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+    })
+  }
+}
+
+const handleSaveRecurring = async (recurring) => {
+  try {
+    if (user.value.uid === 'local_guest') {
+      const newR = { ...recurring, id: Date.now().toString(), lastGenerated: null, createdAt: new Date().toISOString() }
+      recurringTransactions.value.push(newR)
+      localStorage.setItem('guest_recurring', JSON.stringify(recurringTransactions.value))
+    } else {
+      await addDoc(collection(db, 'recurringTransactions'), {
+        ...recurring,
+        uid: user.value.uid,
+        lastGenerated: null,
+        createdAt: new Date().toISOString()
+      })
+    }
+    addToast(
+      currentLang.value === 'ro' ? '✅ Recurenta salvata!' : '✅ Recurring transaction saved!',
+      'success'
+    )
+  } catch (error) {
+    console.error('Error saving recurring:', error)
+    addToast(currentLang.value === 'ro' ? '❌ Eroare la salvare.' : '❌ Save failed.', 'error')
+  }
+}
+
+const handleDeleteRecurring = async (id) => {
+  try {
+    if (user.value.uid === 'local_guest') {
+      recurringTransactions.value = recurringTransactions.value.filter(r => r.id !== id)
+      localStorage.setItem('guest_recurring', JSON.stringify(recurringTransactions.value))
+    } else {
+      await deleteDoc(doc(db, 'recurringTransactions', id))
+    }
+    addToast(
+      currentLang.value === 'ro' ? '🗑️ Recurenta stearsa.' : '🗑️ Recurring transaction deleted.',
+      'success'
+    )
+  } catch (error) {
+    console.error('Error deleting recurring:', error)
+    addToast(currentLang.value === 'ro' ? '❌ Eroare la stergere.' : '❌ Delete failed.', 'error')
   }
 }
 
@@ -753,7 +816,7 @@ const exportCSV = () => {
 .sidebar-nav a.active { background: rgba(52, 152, 219, 0.1); color: #3498db; font-weight: bold; }
 
 /* BUTON PLUTITOR (FAB) */
-.fab-button { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: #3498db; color: white; border: none; border-radius: 50%; font-size: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4); cursor: pointer; z-index: 1000; transition: 0.2s; }
+.fab-button { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: #3498db; color: white; border: none; border-radius: 50%; font-size: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4); cursor: pointer; z-index: 1000; transition: 0.2s; padding-bottom: 4px;}
 .fab-button:hover { transform: scale(1.1) translateY(-5px); background: #2980b9; box-shadow: 0 6px 20px rgba(52, 152, 219, 0.6); }
 
 /* POPUP MODAL (FORMULAR) */
