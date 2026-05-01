@@ -233,34 +233,34 @@ const budgetsWithProgress = computed(() =>
 .budget-card:has(.percent-label.danger)  { border-left-color: #e74c3c; }
 
 /* DARK MODE */
-:global(body.dark-mode) .budget-overview {
+body.dark-mode .budget-overview {
   background-color: #16213e !important;
   color: #f1f1f1 !important;
   box-shadow: none !important;
 }
-:global(body.dark-mode) .budget-section-header h3 { color: #f1f1f1 !important; }
-:global(body.dark-mode) .manage-btn {
+body.dark-mode .budget-section-header h3 { color: #f1f1f1 !important; }
+body.dark-mode .manage-btn {
   background: #1a1a2e !important;
   border-color: #0f3460 !important;
   color: #a5b1c2 !important;
 }
-:global(body.dark-mode) .manage-btn:hover {
+body.dark-mode .manage-btn:hover {
   background: #3498db !important;
   color: white !important;
 }
-:global(body.dark-mode) .budget-empty {
+body.dark-mode .budget-empty {
   background: #1a1a2e !important;
   border-color: #0f3460 !important;
 }
-:global(body.dark-mode) .empty-title { color: #f1f1f1 !important; }
-:global(body.dark-mode) .empty-desc  { color: #a5b1c2 !important; }
-:global(body.dark-mode) .budget-card {
+body.dark-mode .empty-title { color: #f1f1f1 !important; }
+body.dark-mode .empty-desc  { color: #a5b1c2 !important; }
+body.dark-mode .budget-card {
   background: #1a1a2e !important;
   border-left-color: #0f3460 !important;
 }
-:global(body.dark-mode) .budget-category-name { color: #f1f1f1 !important; }
-:global(body.dark-mode) .budget-amounts        { color: #a5b1c2 !important; }
-:global(body.dark-mode) .budget-amounts strong { color: #f1f1f1 !important; }
-:global(body.dark-mode) .remaining-label       { color: #a5b1c2 !important; }
-:global(body.dark-mode) .progress-track        { background: #0f3460 !important; }
+body.dark-mode .budget-category-name { color: #f1f1f1 !important; }
+body.dark-mode .budget-amounts        { color: #a5b1c2 !important; }
+body.dark-mode .budget-amounts strong { color: #f1f1f1 !important; }
+body.dark-mode .remaining-label       { color: #a5b1c2 !important; }
+body.dark-mode .progress-track        { background: #0f3460 !important; }
 </style>

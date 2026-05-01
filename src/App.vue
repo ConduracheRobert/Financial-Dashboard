@@ -587,19 +587,12 @@ body.dark-mode .transaction-list,
 body.dark-mode .list-container,
 body.dark-mode .transaction-item,
 body.dark-mode .empty-state,
-body.dark-mode .empty-list,
-body.dark-mode .budget-overview,
-body.dark-mode .budget-card,
-body.dark-mode .budget-empty {
+body.dark-mode .empty-list {
   background-color: #16213e !important;
   color: #f1f1f1 !important;
   border-color: #0f3460 !important;
   box-shadow: none !important;
 }
-
-body.dark-mode .budget-card    { background-color: #1a1a2e !important; }
-body.dark-mode .budget-empty   { background-color: #1a1a2e !important; }
-body.dark-mode .budget-row     { background-color: #1a1a2e !important; border-color: #0f3460 !important; }
 
 /* 3. Corectăm culorile textelor */
 body.dark-mode .time-navigator button,
@@ -607,10 +600,7 @@ body.dark-mode .time-navigator span,
 body.dark-mode .transaction-list h3,
 body.dark-mode .empty-state p,
 body.dark-mode .empty-list p,
-body.dark-mode label,
-body.dark-mode .budget-section-header h3,
-body.dark-mode .budget-category-name,
-body.dark-mode .budget-row-cat {
+body.dark-mode label {
   color: #f1f1f1 !important;
 }
 
@@ -646,10 +636,44 @@ body.dark-mode .lang-text { color: #f1f1f1; }
 /* 2. CONTAINERE PRINCIPALE (Navigator, Grafic, Item din Listă) */
 body.dark-mode .time-navigator-container,
 body.dark-mode .chart-container,
-body.dark-mode .transaction-item {
+body.dark-mode .transaction-item,
+body.dark-mode .budget-overview {
   background-color: #16213e !important;
   border-color: #0f3460 !important;
 }
+
+/* BUGETE - containere interioare (mai inchise decat wrapper-ul, ca empty-state) */
+body.dark-mode .budget-empty,
+body.dark-mode .budget-card,
+body.dark-mode .budget-row {
+  background-color: #1a1a2e !important;
+  border-color: #0f3460 !important;
+}
+
+/* BUGETE - texte */
+body.dark-mode .budget-section-header h3,
+body.dark-mode .budget-category-name,
+body.dark-mode .budget-amounts strong,
+body.dark-mode .budget-row-cat {
+  color: #f1f1f1 !important;
+}
+body.dark-mode .budget-amounts,
+body.dark-mode .remaining-label,
+body.dark-mode .budget-row-amount,
+body.dark-mode .empty-desc {
+  color: #a5b1c2 !important;
+}
+body.dark-mode .manage-btn {
+  background-color: #1a1a2e !important;
+  border-color: #0f3460 !important;
+  color: #a5b1c2 !important;
+}
+body.dark-mode .manage-btn:hover {
+  background-color: #3498db !important;
+  color: white !important;
+}
+body.dark-mode .progress-track    { background-color: #0f3460 !important; }
+body.dark-mode .budget-row-amount { color: #a5b1c2 !important; }
 
 /* 3. ZONE GRI ȘI MENIURI (Empty States, Toggle Grafic, Filtre Timp) */
 body.dark-mode .empty-state,
