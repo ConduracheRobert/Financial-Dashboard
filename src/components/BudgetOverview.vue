@@ -43,6 +43,10 @@
             <span class="cat-amounts">
               <strong>{{ item.spent.toFixed(0) }}</strong> / {{ item.limitAmount }} RON
             </span>
+            <span v-if="item.limitAmount > 0" class="cat-rate">
+              ≈ {{ Math.round(item.limitAmount / 4.33) }} RON/{{ isRo ? 'săpt.' : 'week' }}
+              · ≈ {{ Math.round(item.limitAmount / 30) }} RON/{{ isRo ? 'zi' : 'day' }}
+            </span>
           </div>
           <span v-if="item.statusClass === 'warning'" class="alert-badge warning">
             ⚠ {{ isRo ? 'Aproape de limită' : 'Near limit' }}
@@ -243,6 +247,7 @@ const budgetsWithProgress = computed(() =>
 .cat-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
 .cat-amounts { font-size: 12px; color: #7f8c8d; margin-top: 2px; }
 .cat-amounts strong { color: #2c3e50; font-size: 13px; }
+.cat-rate { font-size: 11px; color: #95a5a6; margin-top: 2px; }
 
 /* Badge alertă */
 .alert-badge {
@@ -329,6 +334,7 @@ body.dark-mode .cat-icon.danger  { background: rgba(231,  76,  60, 0.2); }
 body.dark-mode .cat-name           { color: #f1f1f1; }
 body.dark-mode .cat-amounts        { color: #a5b1c2; }
 body.dark-mode .cat-amounts strong { color: #f1f1f1; }
+body.dark-mode .cat-rate           { color: #7f8c8d; }
 
 body.dark-mode .alert-badge.warning { background: rgba(230,126,34,0.2);  color: #e67e22; border-color: rgba(230,126,34,0.4); }
 body.dark-mode .alert-badge.danger  { background: rgba(231, 76,60,0.2);  color: #e74c3c; border-color: rgba(231, 76,60,0.4); }
