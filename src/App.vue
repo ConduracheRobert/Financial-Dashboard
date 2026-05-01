@@ -45,7 +45,8 @@
           <button class="close-btn" @click="isSidebarOpen = false">×</button>
         </div>
         <nav class="sidebar-nav">
-          <a href="#" class="active">📊 {{ t.dashboard }}</a>
+          <RouterLink to="/" exactActiveClass="active" @click="isSidebarOpen = false">📊 {{ t.dashboard }}</RouterLink>
+          <RouterLink to="/insights" activeClass="active" @click="isSidebarOpen = false">📈 Insights</RouterLink>
           <a href="#">📝 {{ t.history }}</a>
           <a href="#">⚙️ {{ t.settings }}</a>
         </nav>
@@ -60,54 +61,7 @@
           <button :class="{ active: activeCurrency === 'USD' }" @click="activeCurrency = 'USD'">🇺🇸 USD</button>
         </div>
 
-        <DashboardSummary 
-          :transactions="dashboardTransactions" 
-          :currentFilter="activeCardFilter"
-          :currency="activeCurrency"
-          @filter-changed="type => activeCardFilter = type" 
-          @rates-loaded="handleRates"
-        />
-
-        <RecurringList
-          :recurringTransactions="recurringTransactions"
-          @open-manage="isRecurringModalOpen = true"
-          @delete-recurring="handleDeleteRecurring"
-          @edit-recurring="openEditRecurring"
-          @generate-now="checkAndGenerateRecurring(true, referenceDate)"
-        />
-
-        <BudgetOverview
-          :budgets="budgets"
-          :spentByCategory="spentByCategory"
-          :daysRemaining="daysRemaining"
-          :selectedYear="selectedYear"
-          :selectedMonth="selectedMonth"
-          :viewUnit="viewUnit"
-          @open-manage="isBudgetModalOpen = true"
-        />
-
-        <ExpenseChart
-          :transactions="displayListTransactions"
-          :currentFilter="activeCardFilter"
-        />
-
-        <div class="transactions-section">
-          <div class="list-header">
-      <h3>{{ t.latestTransactions }}</h3>
-      <button @click="exportCSV" class="export-btn">
-        {{ t.locale === 'ro-RO' ? '📥 Descarcă CSV' : '📥 Export CSV' }}
-      </button>
-    </div>
-          <TransactionFilters 
-            v-model:searchQuery="searchQuery"
-            v-model:selectedCategory="selectedCategory"
-          />
-          <TransactionList 
-  :transactions="displayListTransactions" 
-  @delete-transaction="handleDeleteTransaction" 
-  @edit-transaction="openEditModal" 
-/>
-        </div>
+        <router-view />
       </main>
 
       <button class="fab-button" @click="openNewModal" title="Adaugă Tranzacție">+</button>
@@ -166,20 +120,15 @@
 
 <script setup>
 import { ref, computed, onMounted, provide, watch } from 'vue'
+import { RouterView, RouterLink } from 'vue-router'
 import { db, auth } from './firebase'
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth'
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore'
 
-import DashboardSummary from './components/DashboardSummary.vue'
 import TimeNavigator from './components/TimeNavigator.vue'
 import TransactionForm from './components/TransactionForm.vue'
-import TransactionList from './components/TransactionList.vue'
-import TransactionFilters from './components/TransactionFilters.vue'
-import ExpenseChart from './components/ExpenseChart.vue'
 import ToastContainer from './components/ToastContainer.vue'
-import BudgetOverview from './components/BudgetOverview.vue'
 import BudgetForm from './components/BudgetForm.vue'
-import RecurringList from './components/RecurringList.vue'
 import RecurringForm from './components/RecurringForm.vue'
 // Stări aplicație
 const user = ref(null)
@@ -919,6 +868,36 @@ const exportCSV = () => {
   link.click()
   document.body.removeChild(link)
 }
+
+// --- PROVIDE PENTRU VIEWS ---
+provide('viewUnit', viewUnit)
+provide('referenceDate', referenceDate)
+provide('activeCurrency', activeCurrency)
+provide('budgets', budgets)
+provide('recurringTransactions', recurringTransactions)
+provide('dashboardTransactions', dashboardTransactions)
+provide('displayListTransactions', displayListTransactions)
+provide('spentByCategory', spentByCategory)
+provide('daysRemaining', daysRemaining)
+provide('selectedYear', selectedYear)
+provide('selectedMonth', selectedMonth)
+
+provide('activeCardFilter', activeCardFilter)
+provide('setActiveCardFilter', v => { activeCardFilter.value = v })
+provide('searchQuery', searchQuery)
+provide('setSearchQuery', v => { searchQuery.value = v })
+provide('selectedCategory', selectedCategory)
+provide('setSelectedCategory', v => { selectedCategory.value = v })
+
+provide('handleDeleteTransaction', handleDeleteTransaction)
+provide('openEditModal', openEditModal)
+provide('handleDeleteRecurring', handleDeleteRecurring)
+provide('openEditRecurring', openEditRecurring)
+provide('checkAndGenerateRecurring', checkAndGenerateRecurring)
+provide('handleRates', handleRates)
+provide('exportCSV', exportCSV)
+provide('openBudgetModal', () => { isBudgetModalOpen.value = true })
+provide('openRecurringModal', () => { isRecurringModalOpen.value = true })
 </script>
 
 <style scoped>

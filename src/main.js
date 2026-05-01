@@ -1,8 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
+import router from './router'
 
-// Creez instanța principală a aplicației mele
 const app = createApp(App)
-
-// Montez aplicația direct în HTML (în div-ul cu id="app")
+app.use(router)
 app.mount('#app')
