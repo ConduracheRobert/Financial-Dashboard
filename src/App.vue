@@ -548,16 +548,78 @@ const handleDeleteBudget = async (id) => {
 }
 
 // --- RECURENTE: LOAD, SAVE, DELETE ---
+const checkAndGenerateRecurring = async () => {
+  const now = new Date()
+  const nowYear  = now.getFullYear()
+  const nowMonth = now.getMonth() + 1  // 1-12
+  const nowDay   = now.getDate()
+
+  let generatedCount = 0
+
+  for (const r of recurringTransactions.value) {
+    const last = r.lastGenerated ? new Date(r.lastGenerated) : null
+    const lastYear  = last ? last.getFullYear() : 0
+    const lastMonth = last ? last.getMonth() + 1 : 0
+
+    let shouldGenerate = false
+
+    if (r.frequency === 'lunar') {
+      // genereaza daca suntem intr-o luna noua fata de lastGenerated si ziua a sosit
+      const newMonth = (nowYear > lastYear) || (nowYear === lastYear && nowMonth > lastMonth)
+      shouldGenerate = newMonth && nowDay >= r.dayOfMonth
+    } else if (r.frequency === 'anual') {
+      // genereaza daca suntem intr-un an nou fata de lastGenerated, luna si ziua au sosit
+      const newYear = nowYear > lastYear
+      shouldGenerate = newYear && nowMonth >= r.monthOfYear && nowDay >= r.dayOfMonth
+    }
+
+    if (!shouldGenerate) continue
+
+    const txData = {
+      name: r.name,
+      amount: r.amount,
+      category: r.category,
+      date: now.toISOString().split('T')[0]
+    }
+    const newLastGenerated = now.toISOString()
+
+    if (user.value.uid === 'local_guest') {
+      transactions.value.push({ ...txData, id: Date.now().toString() + Math.random() })
+      localStorage.setItem('guest_transactions', JSON.stringify(transactions.value))
+
+      const idx = recurringTransactions.value.findIndex(x => x.id === r.id)
+      if (idx !== -1) recurringTransactions.value[idx].lastGenerated = newLastGenerated
+      localStorage.setItem('guest_recurring', JSON.stringify(recurringTransactions.value))
+    } else {
+      await addDoc(collection(db, 'transactions'), { ...txData, uid: user.value.uid })
+      await updateDoc(doc(db, 'recurringTransactions', r.id), { lastGenerated: newLastGenerated })
+    }
+
+    generatedCount++
+  }
+
+  if (generatedCount > 0) {
+    addToast(
+      currentLang.value === 'ro'
+        ? `🔄 ${generatedCount} ${generatedCount === 1 ? 'tranzactie recurenta generata' : 'tranzactii recurente generate'} automat`
+        : `🔄 ${generatedCount} recurring ${generatedCount === 1 ? 'transaction' : 'transactions'} generated automatically`,
+      'info'
+    )
+  }
+}
+
 const loadRecurring = () => {
   if (!user.value) return
 
   if (user.value.uid === 'local_guest') {
     const saved = localStorage.getItem('guest_recurring')
     recurringTransactions.value = saved ? JSON.parse(saved) : []
+    checkAndGenerateRecurring()
   } else {
     const q = query(collection(db, 'recurringTransactions'), where('uid', '==', user.value.uid))
     onSnapshot(q, (snapshot) => {
       recurringTransactions.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      checkAndGenerateRecurring()
     })
   }
 }
