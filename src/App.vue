@@ -586,51 +586,70 @@ const handleDeleteBudget = async (id) => {
 const checkAndGenerateRecurring = async (manual = false) => {
   const now = new Date()
   const nowYear  = now.getFullYear()
-  const nowMonth = now.getMonth() + 1  // 1-12
+  const nowMonth = now.getMonth() + 1
   const nowDay   = now.getDate()
 
   let generatedCount = 0
+  const guestTxToAdd = []
 
   for (const r of recurringTransactions.value) {
     const last = r.lastGenerated ? new Date(r.lastGenerated) : null
-    const lastYear  = last ? last.getFullYear() : 0
-    const lastMonth = last ? last.getMonth() + 1 : 0
-
-    let shouldGenerate = false
+    const periods = [] // datele pentru care trebuie generate tranzactii
 
     if (r.frequency === 'lunar') {
-      // genereaza daca suntem intr-o luna noua fata de lastGenerated si ziua a sosit
-      const newMonth = (nowYear > lastYear) || (nowYear === lastYear && nowMonth > lastMonth)
-      shouldGenerate = newMonth && nowDay >= r.dayOfMonth
+      // Punctul de start: luna urmatoare dupa lastGenerated, sau luna curenta daca nu a fost niciodata generat
+      let sy = nowYear, sm = nowMonth
+      if (last) {
+        sm = last.getMonth() + 2 // +1 pentru 0-indexed, +1 pentru luna urmatoare
+        sy = last.getFullYear()
+        if (sm > 12) { sm = 1; sy++ }
+      }
+      // Parcurge toate lunile de la sy/sm pana la acum
+      let y = sy, m = sm
+      while (y < nowYear || (y === nowYear && m <= nowMonth)) {
+        const isCurrent = y === nowYear && m === nowMonth
+        if (!isCurrent || nowDay >= r.dayOfMonth) {
+          periods.push(`${y}-${String(m).padStart(2,'0')}-${String(r.dayOfMonth).padStart(2,'0')}`)
+        }
+        if (++m > 12) { m = 1; y++ }
+      }
     } else if (r.frequency === 'anual') {
-      // genereaza daca suntem intr-un an nou fata de lastGenerated, luna si ziua au sosit
-      const newYear = nowYear > lastYear
-      shouldGenerate = newYear && nowMonth >= r.monthOfYear && nowDay >= r.dayOfMonth
+      const startYear = last ? last.getFullYear() + 1 : nowYear
+      for (let y = startYear; y <= nowYear; y++) {
+        const due = y < nowYear
+          || nowMonth > r.monthOfYear
+          || (nowMonth === r.monthOfYear && nowDay >= r.dayOfMonth)
+        if (due) {
+          periods.push(`${y}-${String(r.monthOfYear).padStart(2,'0')}-${String(r.dayOfMonth).padStart(2,'0')}`)
+        }
+      }
     }
 
-    if (!shouldGenerate) continue
+    if (periods.length === 0) continue
 
-    const txData = {
-      name: r.name,
-      amount: r.amount,
-      category: r.category,
-      date: now.toISOString().split('T')[0]
+    for (const date of periods) {
+      const txData = { name: r.name, amount: r.amount, category: r.category, date }
+      if (user.value.uid === 'local_guest') {
+        guestTxToAdd.push({ ...txData, id: Date.now().toString() + Math.random() })
+      } else {
+        await addDoc(collection(db, 'transactions'), { ...txData, uid: user.value.uid })
+      }
+      generatedCount++
     }
+
     const newLastGenerated = now.toISOString()
-
     if (user.value.uid === 'local_guest') {
-      transactions.value.push({ ...txData, id: Date.now().toString() + Math.random() })
-      localStorage.setItem('guest_transactions', JSON.stringify(transactions.value))
-
       const idx = recurringTransactions.value.findIndex(x => x.id === r.id)
       if (idx !== -1) recurringTransactions.value[idx].lastGenerated = newLastGenerated
-      localStorage.setItem('guest_recurring', JSON.stringify(recurringTransactions.value))
     } else {
-      await addDoc(collection(db, 'transactions'), { ...txData, uid: user.value.uid })
       await updateDoc(doc(db, 'recurringTransactions', r.id), { lastGenerated: newLastGenerated })
     }
+  }
 
-    generatedCount++
+  if (user.value.uid === 'local_guest' && guestTxToAdd.length > 0) {
+    transactions.value.push(...guestTxToAdd)
+    localStorage.setItem('guest_transactions', JSON.stringify(transactions.value))
+    localStorage.setItem('guest_recurring', JSON.stringify(recurringTransactions.value))
   }
 
   if (generatedCount > 0) {
@@ -645,10 +664,10 @@ const checkAndGenerateRecurring = async (manual = false) => {
       currentLang.value === 'ro'
         ? recurringTransactions.value.length === 0
           ? '🔄 Nu ai recurente configurate.'
-          : '🔄 Nicio recurenta nu e scadenta inca. Verifica ziua setata.'
+          : '🔄 Totul e la zi. Nicio tranzactie scadenta.'
         : recurringTransactions.value.length === 0
           ? '🔄 No recurring transactions configured.'
-          : '🔄 No recurring transactions due yet. Check the set day.',
+          : '🔄 All up to date. No transactions due.',
       'info'
     )
   }
