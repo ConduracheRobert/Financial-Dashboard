@@ -1,8 +1,13 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "skipLibCheck": true,
+    "noEmit": true
   },
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

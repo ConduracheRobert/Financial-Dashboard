@@ -125,7 +125,6 @@ import TransactionForm from './components/TransactionForm.vue'
 import TransactionList from './components/TransactionList.vue'
 import TransactionFilters from './components/TransactionFilters.vue'
 import ExpenseChart from './components/ExpenseChart.vue'
-
 // Stări aplicație
 const user = ref(null)
 const transactions = ref([])
