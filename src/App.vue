@@ -73,7 +73,7 @@
           @open-manage="isRecurringModalOpen = true"
           @delete-recurring="handleDeleteRecurring"
           @edit-recurring="openEditRecurring"
-          @generate-now="checkAndGenerateRecurring"
+          @generate-now="checkAndGenerateRecurring(true)"
         />
 
         <BudgetOverview
@@ -583,7 +583,7 @@ const handleDeleteBudget = async (id) => {
 }
 
 // --- RECURENTE: LOAD, SAVE, DELETE ---
-const checkAndGenerateRecurring = async () => {
+const checkAndGenerateRecurring = async (manual = false) => {
   const now = new Date()
   const nowYear  = now.getFullYear()
   const nowMonth = now.getMonth() + 1  // 1-12
@@ -638,6 +638,17 @@ const checkAndGenerateRecurring = async () => {
       currentLang.value === 'ro'
         ? `🔄 ${generatedCount} ${generatedCount === 1 ? 'tranzactie recurenta generata' : 'tranzactii recurente generate'} automat`
         : `🔄 ${generatedCount} recurring ${generatedCount === 1 ? 'transaction' : 'transactions'} generated automatically`,
+      'info'
+    )
+  } else if (manual) {
+    addToast(
+      currentLang.value === 'ro'
+        ? recurringTransactions.value.length === 0
+          ? '🔄 Nu ai recurente configurate.'
+          : '🔄 Nicio recurenta nu e scadenta inca. Verifica ziua setata.'
+        : recurringTransactions.value.length === 0
+          ? '🔄 No recurring transactions configured.'
+          : '🔄 No recurring transactions due yet. Check the set day.',
       'info'
     )
   }
