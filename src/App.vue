@@ -74,6 +74,7 @@
           :daysRemaining="daysRemaining"
           :selectedYear="selectedYear"
           :selectedMonth="selectedMonth"
+          :viewUnit="viewUnit"
           @open-manage="isBudgetModalOpen = true"
         />
 

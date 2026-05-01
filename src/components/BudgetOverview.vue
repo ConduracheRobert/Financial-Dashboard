@@ -40,13 +40,7 @@
           </div>
           <div class="cat-info">
             <span class="cat-name">{{ t.catMap[item.category] || item.category }}</span>
-            <span class="cat-amounts">
-              <strong>{{ item.spent.toFixed(0) }}</strong> / {{ item.limitAmount }} RON
-            </span>
-            <span v-if="item.limitAmount > 0" class="cat-rate">
-              ≈ {{ Math.round(item.limitAmount / 4.33) }} RON/{{ isRo ? 'săpt.' : 'week' }}
-              · ≈ {{ Math.round(item.limitAmount / 30) }} RON/{{ isRo ? 'zi' : 'day' }}
-            </span>
+            <span class="cat-amounts">{{ adaptedAmountStr(item) }}</span>
           </div>
           <span v-if="item.statusClass === 'warning'" class="alert-badge warning">
             ⚠ {{ isRo ? 'Aproape de limită' : 'Near limit' }}
@@ -96,7 +90,8 @@ const props = defineProps({
   spentByCategory: { type: Object, required: true },
   daysRemaining:   { type: Number, required: true },
   selectedYear:    { type: Number, required: true },
-  selectedMonth:   { type: Number, required: true }  // 0-indexed
+  selectedMonth:   { type: Number, required: true },
+  viewUnit:        { type: String, required: true }
 })
 
 defineEmits(['open-manage'])
@@ -133,6 +128,30 @@ const budgetsWithProgress = computed(() =>
     return { ...budget, spent, percent, remaining, statusClass }
   })
 )
+
+const adaptedLabel = computed(() => {
+  const u = props.viewUnit
+  if (u === 'day')  return isRo.value ? 'RON/zi'   : 'RON/day'
+  if (u === 'week') return isRo.value ? 'RON/săpt.' : 'RON/week'
+  if (u === 'year') return isRo.value ? 'RON/an'   : 'RON/year'
+  return 'RON/lună'
+})
+
+function adaptValue(monthlyAmount) {
+  const u = props.viewUnit
+  if (u === 'day')  return Math.round(monthlyAmount / 30)
+  if (u === 'week') return Math.round(monthlyAmount / 4.33)
+  if (u === 'year') return Math.round(monthlyAmount * 12)
+  return Math.round(monthlyAmount)
+}
+
+function adaptedAmountStr(item) {
+  const u = props.viewUnit
+  const spentAdapted = adaptValue(item.spent)
+  const limitAdapted = adaptValue(item.limitAmount)
+  const prefix = u === 'month' ? '' : '≈ '
+  return `${prefix}${spentAdapted} / ${prefix}${limitAdapted} ${adaptedLabel.value}`
+}
 </script>
 
 <style scoped>
@@ -247,7 +266,6 @@ const budgetsWithProgress = computed(() =>
 .cat-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
 .cat-amounts { font-size: 12px; color: #7f8c8d; margin-top: 2px; }
 .cat-amounts strong { color: #2c3e50; font-size: 13px; }
-.cat-rate { font-size: 11px; color: #95a5a6; margin-top: 2px; }
 
 /* Badge alertă */
 .alert-badge {
@@ -334,7 +352,6 @@ body.dark-mode .cat-icon.danger  { background: rgba(231,  76,  60, 0.2); }
 body.dark-mode .cat-name           { color: #f1f1f1; }
 body.dark-mode .cat-amounts        { color: #a5b1c2; }
 body.dark-mode .cat-amounts strong { color: #f1f1f1; }
-body.dark-mode .cat-rate           { color: #7f8c8d; }
 
 body.dark-mode .alert-badge.warning { background: rgba(230,126,34,0.2);  color: #e67e22; border-color: rgba(230,126,34,0.4); }
 body.dark-mode .alert-badge.danger  { background: rgba(231, 76,60,0.2);  color: #e74c3c; border-color: rgba(231, 76,60,0.4); }
