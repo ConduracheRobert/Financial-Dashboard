@@ -5,12 +5,19 @@
       <div class="header-text">
         <h3>🔄 {{ isRo ? 'Tranzacții Recurente' : 'Recurring Transactions' }}</h3>
         <span class="header-subtitle">
-          {{ isRo ? 'Template-uri active' : 'Active templates' }} · {{ recurringTransactions.length }}
+          {{ isRo
+            ? 'Tranzacțiile se generează automat la deschiderea aplicației, după data setată'
+            : 'Transactions are auto-generated when you open the app, after the set date' }}
         </span>
       </div>
-      <button class="manage-btn" @click="$emit('open-manage')">
-        ⚙️ {{ isRo ? 'Gestionează' : 'Manage' }}
-      </button>
+      <div class="header-actions">
+        <button class="generate-btn" @click="$emit('generate-now')" :title="isRo ? 'Generează acum' : 'Generate now'">
+          ▶ {{ isRo ? 'Generează acum' : 'Generate now' }}
+        </button>
+        <button class="manage-btn" @click="$emit('open-manage')">
+          ⚙️ {{ isRo ? 'Gestionează' : 'Manage' }}
+        </button>
+      </div>
     </div>
 
     <div v-if="recurringTransactions.length === 0" class="recurring-empty">
@@ -75,7 +82,7 @@ defineProps({
   recurringTransactions: { type: Array, required: true }
 })
 
-defineEmits(['open-manage', 'delete-recurring', 'edit-recurring'])
+defineEmits(['open-manage', 'delete-recurring', 'edit-recurring', 'generate-now'])
 </script>
 
 <style scoped>
@@ -97,6 +104,22 @@ defineEmits(['open-manage', 'delete-recurring', 'edit-recurring'])
 .recurring-header h3 { margin: 0; font-size: 18px; color: #2c3e50; }
 .header-subtitle { font-size: 12px; color: #7f8c8d; font-weight: 500; }
 
+.header-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+.generate-btn {
+  background: #f1f3f5;
+  border: 1px solid #dcdde1;
+  color: #34495e;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+.generate-btn:hover { background: #2ecc71; color: white; border-color: #2ecc71; }
+
 .manage-btn {
   background: #f1f3f5;
   border: 1px solid #dcdde1;
@@ -108,7 +131,6 @@ defineEmits(['open-manage', 'delete-recurring', 'edit-recurring'])
   cursor: pointer;
   transition: 0.2s;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 .manage-btn:hover { background: #3498db; color: white; border-color: #3498db; }
 
@@ -196,6 +218,8 @@ defineEmits(['open-manage', 'delete-recurring', 'edit-recurring'])
 body.dark-mode .recurring-overview  { background: #16213e; box-shadow: none; }
 body.dark-mode .recurring-header h3 { color: #f1f1f1; }
 body.dark-mode .header-subtitle     { color: #a5b1c2; }
+body.dark-mode .generate-btn        { background: #1a1a2e; border-color: #0f3460; color: #a5b1c2; }
+body.dark-mode .generate-btn:hover  { background: #2ecc71; color: white; border-color: #2ecc71; }
 body.dark-mode .manage-btn          { background: #1a1a2e; border-color: #0f3460; color: #a5b1c2; }
 body.dark-mode .manage-btn:hover    { background: #3498db; color: white; border-color: #3498db; }
 

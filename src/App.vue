@@ -73,6 +73,7 @@
           @open-manage="isRecurringModalOpen = true"
           @delete-recurring="handleDeleteRecurring"
           @edit-recurring="openEditRecurring"
+          @generate-now="checkAndGenerateRecurring"
         />
 
         <BudgetOverview
