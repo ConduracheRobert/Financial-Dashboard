@@ -72,6 +72,7 @@
           :recurringTransactions="recurringTransactions"
           @open-manage="isRecurringModalOpen = true"
           @delete-recurring="handleDeleteRecurring"
+          @edit-recurring="openEditRecurring"
         />
 
         <BudgetOverview
@@ -129,16 +130,18 @@
     </div>
   </div>
 
- <div v-if="isRecurringModalOpen" class="modal-overlay" @click.self="isRecurringModalOpen = false">
+ <div v-if="isRecurringModalOpen" class="modal-overlay" @click.self="closeRecurringModal">
     <div class="modal-content">
       <div class="modal-header">
         <h3>🔄 {{ currentLang === 'ro' ? 'Gestionează Recurente' : 'Manage Recurring' }}</h3>
-        <button class="close-btn" @click="isRecurringModalOpen = false">×</button>
+        <button class="close-btn" @click="closeRecurringModal">×</button>
       </div>
       <RecurringForm
         :recurringTransactions="recurringTransactions"
+        :editingRecurring="editingRecurring"
         @save-recurring="handleSaveRecurring"
         @delete-recurring="handleDeleteRecurring"
+        @cancel-edit="editingRecurring = null"
       />
     </div>
   </div>
@@ -196,6 +199,15 @@ const lastAlertMonth = ref(new Date().getMonth())
 // RECURENTE - State Management
 const recurringTransactions = ref([])
 const isRecurringModalOpen = ref(false)
+const editingRecurring = ref(null)
+const closeRecurringModal = () => {
+  isRecurringModalOpen.value = false
+  editingRecurring.value = null
+}
+const openEditRecurring = (item) => {
+  editingRecurring.value = item
+  isRecurringModalOpen.value = true
+}
 
 // NOU: Stări pentru interfața modernă
 const isSidebarOpen = ref(false)
@@ -648,20 +660,32 @@ const loadRecurring = () => {
 
 const handleSaveRecurring = async (recurring) => {
   try {
+    const { id, ...data } = recurring
     if (user.value.uid === 'local_guest') {
-      const newR = { ...recurring, id: Date.now().toString(), lastGenerated: null, createdAt: new Date().toISOString() }
-      recurringTransactions.value.push(newR)
+      if (id) {
+        const idx = recurringTransactions.value.findIndex(r => r.id === id)
+        if (idx !== -1) recurringTransactions.value[idx] = { ...recurringTransactions.value[idx], ...data }
+      } else {
+        recurringTransactions.value.push({ ...data, id: Date.now().toString(), lastGenerated: null, createdAt: new Date().toISOString() })
+      }
       localStorage.setItem('guest_recurring', JSON.stringify(recurringTransactions.value))
     } else {
-      await addDoc(collection(db, 'recurringTransactions'), {
-        ...recurring,
-        uid: user.value.uid,
-        lastGenerated: null,
-        createdAt: new Date().toISOString()
-      })
+      if (id) {
+        await updateDoc(doc(db, 'recurringTransactions', id), data)
+      } else {
+        await addDoc(collection(db, 'recurringTransactions'), {
+          ...data,
+          uid: user.value.uid,
+          lastGenerated: null,
+          createdAt: new Date().toISOString()
+        })
+      }
     }
+    editingRecurring.value = null
     addToast(
-      currentLang.value === 'ro' ? '✅ Recurenta salvata!' : '✅ Recurring transaction saved!',
+      id
+        ? (currentLang.value === 'ro' ? '✅ Recurenta actualizata!' : '✅ Recurring transaction updated!')
+        : (currentLang.value === 'ro' ? '✅ Recurenta salvata!' : '✅ Recurring transaction saved!'),
       'success'
     )
   } catch (error) {

@@ -53,7 +53,10 @@
           {{ item.amount > 0 ? '+' : '' }}{{ item.amount.toFixed(0) }} RON
         </span>
 
-        <button class="delete-btn" @click="$emit('delete-recurring', item.id)" :title="isRo ? 'Șterge' : 'Delete'">
+        <button class="action-btn edit-btn" @click="$emit('edit-recurring', item)" :title="isRo ? 'Editează' : 'Edit'">
+          ✏️
+        </button>
+        <button class="action-btn delete-btn" @click="$emit('delete-recurring', item.id)" :title="isRo ? 'Șterge' : 'Delete'">
           🗑️
         </button>
       </div>
@@ -72,7 +75,7 @@ defineProps({
   recurringTransactions: { type: Array, required: true }
 })
 
-defineEmits(['open-manage', 'delete-recurring'])
+defineEmits(['open-manage', 'delete-recurring', 'edit-recurring'])
 </script>
 
 <style scoped>
@@ -170,7 +173,7 @@ defineEmits(['open-manage', 'delete-recurring'])
 .card-amount.income  { color: #27ae60; }
 .card-amount.expense { color: #c0392b; }
 
-.delete-btn {
+.action-btn {
   background: transparent;
   border: none;
   font-size: 16px;
@@ -181,7 +184,9 @@ defineEmits(['open-manage', 'delete-recurring'])
   padding: 4px;
   border-radius: 4px;
 }
-.delete-btn:hover { opacity: 1; background: rgba(231, 76, 60, 0.1); }
+.action-btn:hover    { opacity: 1; }
+.edit-btn:hover   { background: rgba(52, 152, 219, 0.1); }
+.delete-btn:hover { background: rgba(231,  76,  60, 0.1); }
 
 @media (max-width: 600px) {
   .card-meta { display: none; }
