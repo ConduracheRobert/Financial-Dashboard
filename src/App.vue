@@ -69,9 +69,9 @@
         />
 
         <BudgetOverview
-          :budgets="[]"
-          :spentByCategory="{}"
-          :daysRemaining="0"
+          :budgets="budgets"
+          :spentByCategory="spentByCategory"
+          :daysRemaining="daysRemaining"
           @open-manage="isBudgetModalOpen = true"
         />
 
@@ -112,9 +112,9 @@
         <button class="close-btn" @click="isBudgetModalOpen = false">×</button>
       </div>
       <BudgetForm
-        :budgets="[]"
-        @save-budget="() => {}"
-        @delete-budget="() => {}"
+        :budgets="budgets"
+        @save-budget="handleSaveBudget"
+        @delete-budget="handleDeleteBudget"
       />
     </div>
   </div>
@@ -137,7 +137,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, provide, watch } from 'vue'
 import { db, auth } from './firebase'
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth'
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore'
@@ -161,6 +161,11 @@ const selectedCategory = ref('')
 const activeCardFilter = ref(null)
 const activeCurrency = ref('RON')
 const globalRates = ref({ EUR: 1, USD: 1 })
+
+// BUGETE - State Management
+const budgets = ref([])
+const alertedBudgets = ref(new Set())
+const lastAlertMonth = ref(new Date().getMonth())
 
 // NOU: Stări pentru interfața modernă
 const isSidebarOpen = ref(false)
@@ -204,6 +209,7 @@ onMounted(() => {
       })
     }
   })
+  loadBudgets()
 })
 
 const handleLogin = async () => {
@@ -242,6 +248,8 @@ const continueAsGuest = () => {
   } else {
     transactions.value = []
   }
+  
+  loadBudgets()
 }
 // --- LOGICĂ PENTRU EDITARE ---
 const transactionToEdit = ref(null)
@@ -361,7 +369,23 @@ const t = computed(() => {
   }
 })
 // Aceasta este „magia” care trimite dicționarul invizibil către TOATE celelalte componente!
+
+
 provide('t', t)
+
+// --- WATCH PE USER ---
+watch(user, (newUser, oldUser) => {
+  if (!newUser) {
+    budgets.value = []
+    alertedBudgets.value.clear()
+  } else if (oldUser && newUser.uid !== oldUser.uid) {
+    budgets.value = []
+    alertedBudgets.value.clear()
+    loadBudgets()
+  } else if (!oldUser && newUser) {
+    loadBudgets()
+  }
+})
 
 // NOU: Funcție care salvează și închide automat popup-ul
 const handleSaveAndClose = async (data) => {
@@ -396,6 +420,94 @@ const handleDeleteTransaction = async (id) => {
 }
 
 const handleRates = (rates) => { globalRates.value = rates }
+
+// --- BUGETE: LOAD, SAVE, DELETE ---
+const loadBudgets = () => {
+  if (!user.value) return
+  
+  if (user.value.uid === 'local_guest') {
+    // Încarcă din localStorage
+    const saved = localStorage.getItem('guest_budgets')
+    budgets.value = saved ? JSON.parse(saved) : []
+  } else {
+    // Încarcă din Firestore
+    const q = query(collection(db, 'budgets'), where('uid', '==', user.value.uid))
+    onSnapshot(q, (snapshot) => {
+      budgets.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+    })
+  }
+  // Reset alertele la schimbul de user
+  alertedBudgets.value = new Set()
+  lastAlertMonth.value = new Date().getMonth()
+}
+
+const handleSaveBudget = async (budget) => {
+  try {
+    if (user.value.uid === 'local_guest') {
+      // Guest mode: localStorage
+      if (budget.id) {
+        const idx = budgets.value.findIndex(b => b.id === budget.id)
+        if (idx !== -1) {
+          budgets.value[idx] = { ...budget }
+        }
+      } else {
+        const newBudget = { ...budget, id: Date.now().toString() }
+        budgets.value.push(newBudget)
+      }
+      localStorage.setItem('guest_budgets', JSON.stringify(budgets.value))
+    } else {
+      // Firestore
+      if (budget.id) {
+        await updateDoc(doc(db, 'budgets', budget.id), {
+          category: budget.category,
+          limitAmount: budget.limitAmount
+        })
+      } else {
+        await addDoc(collection(db, 'budgets'), {
+          category: budget.category,
+          limitAmount: budget.limitAmount,
+          uid: user.value.uid,
+          createdAt: new Date().toISOString()
+        })
+      }
+    }
+    // Reset alertele când se salvează buget nou
+    alertedBudgets.value.clear()
+    addToast(
+      currentLang.value === 'ro' ? '✅ Buget salvat cu succes!' : '✅ Budget saved successfully!',
+      'success'
+    )
+  } catch (error) {
+    console.error('Error saving budget:', error)
+    addToast(
+      currentLang.value === 'ro' ? '❌ Eroare la salvare.' : '❌ Save failed.',
+      'error'
+    )
+  }
+}
+
+const handleDeleteBudget = async (id) => {
+  try {
+    if (user.value.uid === 'local_guest') {
+      // Guest mode
+      budgets.value = budgets.value.filter(b => b.id !== id)
+      localStorage.setItem('guest_budgets', JSON.stringify(budgets.value))
+    } else {
+      // Firestore
+      await deleteDoc(doc(db, 'budgets', id))
+    }
+    addToast(
+      currentLang.value === 'ro' ? '🗑️ Buget șters.' : '🗑️ Budget deleted.',
+      'info'
+    )
+  } catch (error) {
+    console.error('Error deleting budget:', error)
+    addToast(
+      currentLang.value === 'ro' ? '❌ Eroare la ștergere.' : '❌ Delete failed.',
+      'error'
+    )
+  }
+}
 
 // --- CONDUCTE DE DATE ---
 
@@ -451,6 +563,73 @@ const displayListTransactions = computed(() => {
 
     return matchesSearch && matchesCategory
   })
+})
+
+// --- BUGETE COMPUTED PROPERTIES ---
+const spentByCategory = computed(() => {
+  const spent = {}
+  
+  // Inițializează toate categoriile cu 0
+  budgets.value.forEach(b => {
+    spent[b.category] = 0
+  })
+  
+  // Adună cheltuielile din luna curentă
+  baseFilteredTransactions.value.forEach(t => {
+    if (t.amount > 0) { // Doar cheltuielile (nu veniturile)
+      if (!spent[t.category]) spent[t.category] = 0
+      spent[t.category] += t.amount
+    }
+  })
+  
+  // LOGICA TOAST ALERT @ 80% și 100%
+  const currentMonth = new Date().getMonth()
+  if (currentMonth !== lastAlertMonth.value) {
+    // S-a schimbat luna → resetează alertele
+    alertedBudgets.value.clear()
+    lastAlertMonth.value = currentMonth
+  }
+  
+  budgets.value.forEach(budget => {
+    const categorySpent = spent[budget.category] || 0
+    const percent = budget.limitAmount > 0 ? (categorySpent / budget.limitAmount) * 100 : 0
+    
+    if (percent >= 100) {
+      // Alert @ 100%
+      const alertKey = `100_${budget.category}`
+      if (!alertedBudgets.value.has(alertKey)) {
+        alertedBudgets.value.add(alertKey)
+        const catName = t.value.catMap[budget.category] || budget.category
+        const msg = currentLang.value === 'ro'
+          ? `❌ Buget depășit! Ați cheltuit 100%+ din bugetul pentru ${catName}`
+          : `❌ Budget exceeded! You spent 100%+ of budget for ${catName}`
+        addToast(msg, 'danger')
+      }
+    } else if (percent >= 80) {
+      // Alert @ 80%
+      const alertKey = `80_${budget.category}`
+      if (!alertedBudgets.value.has(alertKey)) {
+        alertedBudgets.value.add(alertKey)
+        const catName = t.value.catMap[budget.category] || budget.category
+        const msg = currentLang.value === 'ro'
+          ? `⚠️ Atenție! Ați cheltuit ${percent.toFixed(0)}% din bugetul pentru ${catName}`
+          : `⚠️ Warning! You spent ${percent.toFixed(0)}% of budget for ${catName}`
+        addToast(msg, 'warning')
+      }
+    }
+  })
+  
+  return spent
+})
+
+const daysRemaining = computed(() => {
+  const today = new Date()
+  const currentYear = today.getFullYear()
+  const currentMonth = today.getMonth()
+  const lastDay = new Date(currentYear, currentMonth + 1, 0)
+  const msPerDay = 24 * 60 * 60 * 1000
+  const daysLeft = Math.ceil((lastDay - today) / msPerDay)
+  return Math.max(0, daysLeft)
 })
 // --- FUNCȚIA DE EXPORT EXCEL/CSV ---
 const exportCSV = () => {
@@ -907,3 +1086,4 @@ body.dark-mode .export-btn:hover {
 }
 
 </style>
+
