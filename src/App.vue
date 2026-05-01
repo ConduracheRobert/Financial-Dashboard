@@ -244,10 +244,10 @@ onMounted(() => {
       onSnapshot(q, (snapshot) => {
         transactions.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
       })
+      loadBudgets()
+      loadRecurring()
     }
   })
-  loadBudgets()
-  loadRecurring()
 })
 
 const handleLogin = async () => {
