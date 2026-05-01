@@ -96,6 +96,8 @@
     
     </div>
 
+ <ToastContainer :toasts="toasts" />
+
  <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
       <div class="modal-content">
         <div class="modal-header">
@@ -125,6 +127,7 @@ import TransactionForm from './components/TransactionForm.vue'
 import TransactionList from './components/TransactionList.vue'
 import TransactionFilters from './components/TransactionFilters.vue'
 import ExpenseChart from './components/ExpenseChart.vue'
+import ToastContainer from './components/ToastContainer.vue'
 // Stări aplicație
 const user = ref(null)
 const transactions = ref([])
@@ -139,6 +142,16 @@ const globalRates = ref({ EUR: 1, USD: 1 })
 // NOU: Stări pentru interfața modernă
 const isSidebarOpen = ref(false)
 const isModalOpen = ref(false)
+
+// --- SISTEM TOAST NOTIFICĂRI ---
+const toasts = ref([])
+const addToast = (message, type = 'info') => {
+  const id = Date.now()
+  toasts.value.push({ id, message, type })
+  setTimeout(() => {
+    toasts.value = toasts.value.filter(t => t.id !== id)
+  }, 4000)
+}
 // --- TEMĂ (DARK/LIGHT MODE) ---
 const isDarkMode = ref(localStorage.getItem('theme') === 'dark')
 
@@ -326,16 +339,32 @@ provide('t', t)
 const handleSaveAndClose = async (data) => {
   try {
     await handleSaveTransaction(data)
-    isModalOpen.value = false 
+    isModalOpen.value = false
+    const isEdit = !!data.id
+    addToast(
+      isEdit
+        ? (currentLang.value === 'ro' ? '✅ Tranzacție actualizată cu succes!' : '✅ Transaction updated successfully!')
+        : (currentLang.value === 'ro' ? '✅ Tranzacție adăugată cu succes!' : '✅ Transaction added successfully!'),
+      'success'
+    )
   } catch (error) {
     console.error("EROARE LA SALVAREA ÎN FIREBASE:", error)
-    alert("Atenție: Firebase a respins adăugarea! Apasă F12 (sau Inspect) și uită-te în fila Console ca să vezi de ce.")
-    isModalOpen.value = false // Închide fereastra chiar dacă dă eroare, ca să nu rămână blocată pe ecran
+    addToast(
+      currentLang.value === 'ro'
+        ? '❌ Eroare la salvare. Verifică consola pentru detalii.'
+        : '❌ Save failed. Check the console for details.',
+      'error'
+    )
+    isModalOpen.value = false
   }
 }
 
 const handleDeleteTransaction = async (id) => {
   await deleteDoc(doc(db, 'transactions', id))
+  addToast(
+    currentLang.value === 'ro' ? '🗑️ Tranzacție ștearsă.' : '🗑️ Transaction deleted.',
+    'info'
+  )
 }
 
 const handleRates = (rates) => { globalRates.value = rates }
