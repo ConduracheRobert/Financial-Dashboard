@@ -183,7 +183,9 @@ const closeBudgetModal = () => {
 
 // --- SISTEM TOAST NOTIFICĂRI ---
 const toasts = ref([])
-const addToast = (message, type = 'info', duration = 4000, action = null) => {
+const addToast = (message, type = 'info', action = null) => {
+  const durations = { success: 3000, error: 6000, info: 8000 }
+  const duration = durations[type] || 4000
   const id = Date.now()
   toasts.value.push({ id, message, type, action })
   setTimeout(() => {
@@ -419,7 +421,6 @@ const handleSaveAndClose = async (data) => {
             ? `💡 Ai cheltuit pe ${catLabel}. Vrei să îți setezi un buget pentru ea?`
             : `💡 You spent on ${catLabel}. Want to set a budget for it?`,
           'info',
-          7000,
           {
             label: currentLang.value === 'ro' ? 'Setează buget' : 'Set budget',
             handler: () => {
