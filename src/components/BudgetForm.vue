@@ -248,24 +248,24 @@ const submitForm = () => {
 
 /* DARK MODE */
 :global(body.dark-mode) .budget-row {
-  background: #1a1a2e;
-  border-color: #0f3460;
+  background: #1a1a2e !important;
+  border-color: #0f3460 !important;
 }
-:global(body.dark-mode) .budget-row-cat { color: #f1f1f1; }
-:global(body.dark-mode) .budget-row-amount { color: #a5b1c2; }
+:global(body.dark-mode) .budget-row-cat    { color: #f1f1f1 !important; }
+:global(body.dark-mode) .budget-row-amount { color: #a5b1c2 !important; }
 :global(body.dark-mode) .existing-budgets h4,
-:global(body.dark-mode) .budget-form h4 { color: #a5b1c2; }
-:global(body.dark-mode) .divider { border-top-color: #0f3460; }
-:global(body.dark-mode) .input-group label { color: #a5b1c2; }
+:global(body.dark-mode) .budget-form h4   { color: #a5b1c2 !important; }
+:global(body.dark-mode) .divider          { border-top-color: #0f3460 !important; }
+:global(body.dark-mode) .input-group label { color: #a5b1c2 !important; }
 :global(body.dark-mode) .input-group input,
 :global(body.dark-mode) .input-group select {
-  background: #1a1a2e;
-  color: #f1f1f1;
-  border-color: #0f3460;
+  background: #1a1a2e !important;
+  color: #f1f1f1 !important;
+  border-color: #0f3460 !important;
 }
 :global(body.dark-mode) .cancel-btn {
-  background: #1a1a2e;
-  border-color: #0f3460;
-  color: #a5b1c2;
+  background: #1a1a2e !important;
+  border-color: #0f3460 !important;
+  color: #a5b1c2 !important;
 }
 </style>

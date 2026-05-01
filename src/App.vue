@@ -587,12 +587,19 @@ body.dark-mode .transaction-list,
 body.dark-mode .list-container,
 body.dark-mode .transaction-item,
 body.dark-mode .empty-state,
-body.dark-mode .empty-list {
+body.dark-mode .empty-list,
+body.dark-mode .budget-overview,
+body.dark-mode .budget-card,
+body.dark-mode .budget-empty {
   background-color: #16213e !important;
   color: #f1f1f1 !important;
   border-color: #0f3460 !important;
   box-shadow: none !important;
 }
+
+body.dark-mode .budget-card    { background-color: #1a1a2e !important; }
+body.dark-mode .budget-empty   { background-color: #1a1a2e !important; }
+body.dark-mode .budget-row     { background-color: #1a1a2e !important; border-color: #0f3460 !important; }
 
 /* 3. Corectăm culorile textelor */
 body.dark-mode .time-navigator button,
@@ -600,7 +607,10 @@ body.dark-mode .time-navigator span,
 body.dark-mode .transaction-list h3,
 body.dark-mode .empty-state p,
 body.dark-mode .empty-list p,
-body.dark-mode label {
+body.dark-mode label,
+body.dark-mode .budget-section-header h3,
+body.dark-mode .budget-category-name,
+body.dark-mode .budget-row-cat {
   color: #f1f1f1 !important;
 }
 

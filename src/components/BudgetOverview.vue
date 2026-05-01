@@ -234,27 +234,33 @@ const budgetsWithProgress = computed(() =>
 
 /* DARK MODE */
 :global(body.dark-mode) .budget-overview {
-  background: #16213e;
-  color: #f1f1f1;
+  background-color: #16213e !important;
+  color: #f1f1f1 !important;
+  box-shadow: none !important;
 }
-:global(body.dark-mode) .budget-section-header h3 { color: #f1f1f1; }
+:global(body.dark-mode) .budget-section-header h3 { color: #f1f1f1 !important; }
 :global(body.dark-mode) .manage-btn {
-  background: #1a1a2e;
-  border-color: #0f3460;
-  color: #a5b1c2;
+  background: #1a1a2e !important;
+  border-color: #0f3460 !important;
+  color: #a5b1c2 !important;
 }
-:global(body.dark-mode) .manage-btn:hover { background: #3498db; color: white; }
+:global(body.dark-mode) .manage-btn:hover {
+  background: #3498db !important;
+  color: white !important;
+}
 :global(body.dark-mode) .budget-empty {
-  background: #1a1a2e;
-  border-color: #0f3460;
+  background: #1a1a2e !important;
+  border-color: #0f3460 !important;
 }
-:global(body.dark-mode) .empty-title { color: #f1f1f1; }
-:global(body.dark-mode) .empty-desc  { color: #a5b1c2; }
+:global(body.dark-mode) .empty-title { color: #f1f1f1 !important; }
+:global(body.dark-mode) .empty-desc  { color: #a5b1c2 !important; }
 :global(body.dark-mode) .budget-card {
-  background: #1a1a2e;
-  border-left-color: #0f3460;
+  background: #1a1a2e !important;
+  border-left-color: #0f3460 !important;
 }
-:global(body.dark-mode) .budget-category-name { color: #f1f1f1; }
-:global(body.dark-mode) .budget-amounts strong { color: #f1f1f1; }
-:global(body.dark-mode) .progress-track { background: #0f3460; }
+:global(body.dark-mode) .budget-category-name { color: #f1f1f1 !important; }
+:global(body.dark-mode) .budget-amounts        { color: #a5b1c2 !important; }
+:global(body.dark-mode) .budget-amounts strong { color: #f1f1f1 !important; }
+:global(body.dark-mode) .remaining-label       { color: #a5b1c2 !important; }
+:global(body.dark-mode) .progress-track        { background: #0f3460 !important; }
 </style>
