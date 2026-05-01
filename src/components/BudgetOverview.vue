@@ -2,7 +2,13 @@
   <div class="budget-overview">
 
     <div class="budget-section-header">
-      <h3>🎯 {{ isRo ? 'Bugete Lunare' : 'Monthly Budgets' }}</h3>
+      <div class="header-text">
+        <h3>🎯 {{ isRo ? 'Bugete Lunare' : 'Monthly Budgets' }}</h3>
+        <span class="header-subtitle">
+          {{ currentMonthLabel }} · {{ daysRemaining }}
+          {{ isRo ? (daysRemaining === 1 ? 'zi rămasă' : 'zile rămase') : (daysRemaining === 1 ? 'day left' : 'days left') }}
+        </span>
+      </div>
       <button class="manage-btn" @click="$emit('open-manage')">
         ⚙️ {{ isRo ? 'Gestionează' : 'Manage' }}
       </button>
@@ -10,29 +16,39 @@
 
     <div v-if="budgets.length === 0" class="budget-empty">
       <div class="empty-icon">🎯</div>
-      <p class="empty-title">
-        {{ isRo ? 'Nu ai bugete setate.' : 'No budgets set.' }}
-      </p>
+      <p class="empty-title">{{ isRo ? 'Nu ai bugete setate.' : 'No budgets set.' }}</p>
       <p class="empty-desc">
         {{ isRo
-          ? 'Apasă butonul de mai jos pentru a planifica cheltuielile lunare.'
-          : 'Click the button below to plan your monthly expenses.' }}
+          ? 'Apasă mai jos pentru a planifica cheltuielile lunare.'
+          : 'Click below to plan your monthly expenses.' }}
       </p>
       <button class="cta-btn" @click="$emit('open-manage')">
         {{ isRo ? '+ Adaugă primul buget' : '+ Add your first budget' }}
       </button>
     </div>
 
-    <div v-else class="budget-list">
+    <div v-else class="budget-grid">
       <div
         v-for="item in budgetsWithProgress"
         :key="item.category"
         class="budget-card"
+        :class="item.statusClass"
       >
-        <div class="budget-card-header">
-          <span class="budget-category-name">{{ t.catMap[item.category] || item.category }}</span>
-          <span class="budget-amounts">
-            <strong>{{ item.spent.toFixed(0) }}</strong> / {{ item.limitAmount }} RON
+        <div class="card-top">
+          <div class="cat-icon" :class="item.statusClass">
+            {{ CATEGORY_EMOJI[item.category] || '📦' }}
+          </div>
+          <div class="cat-info">
+            <span class="cat-name">{{ t.catMap[item.category] || item.category }}</span>
+            <span class="cat-amounts">
+              <strong>{{ item.spent.toFixed(0) }}</strong> / {{ item.limitAmount }} RON
+            </span>
+          </div>
+          <span v-if="item.statusClass === 'warning'" class="alert-badge warning">
+            ⚠ {{ isRo ? 'Aproape de limită' : 'Near limit' }}
+          </span>
+          <span v-else-if="item.statusClass === 'danger'" class="alert-badge danger">
+            ✕ {{ isRo ? 'Depășit' : 'Exceeded' }}
           </span>
         </div>
 
@@ -44,19 +60,19 @@
           ></div>
         </div>
 
-        <div class="budget-card-footer">
-          <span class="percent-label" :class="item.statusClass">
-            {{ item.statusIcon }} {{ item.percent.toFixed(0) }}%
+        <div class="card-bottom">
+          <span class="pct-label" :class="item.statusClass">
+            {{ item.percent.toFixed(0) }}%
           </span>
-          <span v-if="item.percent < 100" class="remaining-label">
+          <span v-if="item.percent < 100" class="remaining-text">
             {{ isRo
-              ? `Rămas: ${item.remaining.toFixed(0)} RON · ${daysRemaining} zile`
-              : `Left: ${item.remaining.toFixed(0)} RON · ${daysRemaining} days` }}
+              ? `Rămas: ${item.remaining.toFixed(0)} RON · ${daysRemaining} ${daysRemaining === 1 ? 'zi' : 'zile'}`
+              : `Left: ${item.remaining.toFixed(0)} RON · ${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}` }}
           </span>
-          <span v-else class="remaining-label exceeded">
+          <span v-else class="remaining-text exceeded">
             {{ isRo
-              ? `Depășit cu ${Math.abs(item.remaining).toFixed(0)} RON!`
-              : `Exceeded by ${Math.abs(item.remaining).toFixed(0)} RON!` }}
+              ? `Depășit cu ${Math.abs(item.remaining).toFixed(0)} RON`
+              : `Exceeded by ${Math.abs(item.remaining).toFixed(0)} RON` }}
           </span>
         </div>
       </div>
@@ -72,30 +88,48 @@ const t = inject('t')
 const isRo = computed(() => t.value.locale === 'ro-RO')
 
 const props = defineProps({
-  budgets: { type: Array, required: true },
+  budgets:         { type: Array,  required: true },
   spentByCategory: { type: Object, required: true },
-  daysRemaining: { type: Number, required: true }
+  daysRemaining:   { type: Number, required: true }
 })
 
 defineEmits(['open-manage'])
 
+const CATEGORY_EMOJI = {
+  'Mâncare':           '🍽️',
+  'Transport':         '🚗',
+  'Facturi & Utilități': '⚡',
+  'Cumpărături':       '🛍️',
+  'Divertisment':      '🎮',
+  'Sănătate':          '💊',
+  'Educație':          '📚',
+  'Casă':              '🏠',
+  'Altele':            '📦'
+}
+
+const currentMonthLabel = computed(() => {
+  const d = new Date()
+  return d.toLocaleDateString(t.value.locale, { month: 'long', year: 'numeric' })
+})
+
 const budgetsWithProgress = computed(() =>
   props.budgets.map(budget => {
-    const spent = Math.abs(props.spentByCategory[budget.category] || 0)
-    const percent = budget.limitAmount > 0 ? (spent / budget.limitAmount) * 100 : 0
+    const spent   = Math.abs(props.spentByCategory[budget.category] || 0)
+    const percent  = budget.limitAmount > 0 ? (spent / budget.limitAmount) * 100 : 0
     const remaining = budget.limitAmount - spent
 
-    let statusClass, statusIcon
-    if (percent >= 100)      { statusClass = 'danger';  statusIcon = '❌' }
-    else if (percent >= 80)  { statusClass = 'warning'; statusIcon = '⚠️' }
-    else                     { statusClass = 'good';    statusIcon = '✅' }
+    let statusClass
+    if (percent >= 100)     statusClass = 'danger'
+    else if (percent >= 80) statusClass = 'warning'
+    else                    statusClass = 'good'
 
-    return { ...budget, spent, percent, remaining, statusClass, statusIcon }
+    return { ...budget, spent, percent, remaining, statusClass }
   })
 )
 </script>
 
 <style scoped>
+/* === WRAPPER === */
 .budget-overview {
   background: white;
   padding: 20px;
@@ -104,18 +138,16 @@ const budgetsWithProgress = computed(() =>
   margin-bottom: 20px;
 }
 
+/* === HEADER === */
 .budget-section-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 16px;
 }
-
-.budget-section-header h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #2c3e50;
-}
+.header-text { display: flex; flex-direction: column; gap: 3px; }
+.budget-section-header h3 { margin: 0; font-size: 18px; color: #2c3e50; }
+.header-subtitle { font-size: 12px; color: #7f8c8d; font-weight: 500; text-transform: capitalize; }
 
 .manage-btn {
   background: #f1f3f5;
@@ -127,24 +159,23 @@ const budgetsWithProgress = computed(() =>
   font-weight: bold;
   cursor: pointer;
   transition: 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.manage-btn:hover {
-  background: #3498db;
-  color: white;
-  border-color: #3498db;
-}
+.manage-btn:hover { background: #3498db; color: white; border-color: #3498db; }
 
-/* EMPTY STATE */
+/* === EMPTY STATE — identic cu .empty-list din TransactionList === */
 .budget-empty {
   text-align: center;
-  padding: 30px 20px;
+  padding: 40px 20px;
+  color: #7f8c8d;
   background: #f8f9fa;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 2px dashed #dcdde1;
 }
-.empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.6; }
+.empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.5; }
 .empty-title { margin: 0 0 6px 0; font-weight: bold; color: #34495e; font-size: 16px; }
-.empty-desc { margin: 0 0 16px 0; color: #7f8c8d; font-size: 14px; }
+.empty-desc  { margin: 0 0 16px 0; color: #7f8c8d; font-size: 14px; }
 .cta-btn {
   background: #3498db;
   color: white;
@@ -158,109 +189,153 @@ const budgetsWithProgress = computed(() =>
 }
 .cta-btn:hover { background: #2980b9; }
 
-/* BUDGET CARDS */
-.budget-list { display: flex; flex-direction: column; gap: 12px; }
+/* === GRID === */
+.budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
 
+/* === CARD — aceleasi valori ca .transaction-item === */
 .budget-card {
-  background: #f8f9fa;
+  background: white;
+  border: 1px solid #f1f3f5;
+  border-left: 3px solid #dcdde1;
   border-radius: 10px;
-  padding: 14px 16px;
-  border-left: 4px solid #dcdde1;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   transition: 0.2s;
 }
+.budget-card.good    { border-left-color: #2ecc71; }
+.budget-card.warning { border-left-color: #e67e22; }
+.budget-card.danger  { border-left-color: #e74c3c; }
 
-.budget-card-header {
+/* === TOP ROW === */
+.card-top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.budget-category-name {
+/* Iconiță 36×36px, pătrat rotunjit — culoare semantică cu opacitate */
+.cat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.cat-icon.good    { background: rgba(46,  204, 113, 0.12); }
+.cat-icon.warning { background: rgba(230, 126,  34, 0.12); }
+.cat-icon.danger  { background: rgba(231,  76,  60, 0.12); }
+
+.cat-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.cat-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
+.cat-amounts { font-size: 12px; color: #7f8c8d; margin-top: 2px; }
+.cat-amounts strong { color: #2c3e50; font-size: 13px; }
+
+/* Badge alertă */
+.alert-badge {
+  font-size: 11px;
   font-weight: bold;
-  color: #2c3e50;
-  font-size: 14px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.alert-badge.warning {
+  background: rgba(230, 126, 34, 0.12);
+  color: #d35400;
+  border: 1px solid rgba(230, 126, 34, 0.3);
+}
+.alert-badge.danger {
+  background: rgba(231, 76, 60, 0.12);
+  color: #c0392b;
+  border: 1px solid rgba(231, 76, 60, 0.3);
 }
 
-.budget-amounts {
-  font-size: 13px;
-  color: #7f8c8d;
-}
-
-.budget-amounts strong {
-  color: #2c3e50;
-  font-size: 15px;
-}
-
-/* PROGRESS BAR */
+/* === PROGRESS BAR === */
 .progress-track {
   height: 8px;
-  background: #e0e0e0;
-  border-radius: 4px;
+  background: #f1f3f5;
+  border-radius: 99px;
   overflow: hidden;
-  margin-bottom: 8px;
 }
-
 .progress-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 99px;
   transition: width 0.5s ease;
 }
-
 .progress-fill.good    { background: #2ecc71; }
 .progress-fill.warning { background: #e67e22; }
 .progress-fill.danger  { background: #e74c3c; }
 
-/* FOOTER */
-.budget-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* === BOTTOM ROW === */
+.card-bottom { display: flex; align-items: center; gap: 8px; }
+
+.pct-label {
   font-size: 12px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.pct-label.good    { background: rgba(46,  204, 113, 0.12); color: #27ae60; }
+.pct-label.warning { background: rgba(230, 126,  34, 0.12); color: #d35400; }
+.pct-label.danger  { background: rgba(231,  76,  60, 0.12); color: #c0392b; }
+
+.remaining-text { font-size: 12px; color: #7f8c8d; }
+.remaining-text.exceeded { color: #c0392b; font-weight: bold; }
+
+/* === RESPONSIVE === */
+@media (max-width: 600px) {
+  .budget-grid { grid-template-columns: 1fr; }
+  .alert-badge { align-self: flex-start; }
 }
 
-.percent-label { font-weight: bold; }
-.percent-label.good    { color: #27ae60; }
-.percent-label.warning { color: #d35400; }
-.percent-label.danger  { color: #c0392b; }
+/* ===================================================
+   DARK MODE — pattern identic cu DashboardSummary
+   (body.dark-mode .class in scoped = body.dark-mode .class[data-v-xxx])
+   =================================================== */
+body.dark-mode .budget-overview   { background: #16213e; box-shadow: none; }
+body.dark-mode .budget-section-header h3 { color: #f1f1f1; }
+body.dark-mode .header-subtitle   { color: #a5b1c2; }
+body.dark-mode .manage-btn        { background: #1a1a2e; border-color: #0f3460; color: #a5b1c2; }
+body.dark-mode .manage-btn:hover  { background: #3498db; color: white; border-color: #3498db; }
 
-.remaining-label { color: #7f8c8d; }
-.remaining-label.exceeded { color: #c0392b; font-weight: bold; }
+body.dark-mode .budget-empty { background: #1a1a2e; border-color: #0f3460; }
+body.dark-mode .empty-title  { color: #f1f1f1; }
+body.dark-mode .empty-desc   { color: #a5b1c2; }
 
-/* Border color matching status */
-.budget-card:has(.percent-label.good)    { border-left-color: #2ecc71; }
-.budget-card:has(.percent-label.warning) { border-left-color: #e67e22; }
-.budget-card:has(.percent-label.danger)  { border-left-color: #e74c3c; }
+body.dark-mode .budget-card        { background: #1a1a2e; border-color: #0f3460; box-shadow: none; }
+body.dark-mode .budget-card.good    { border-left-color: #2ecc71; }
+body.dark-mode .budget-card.warning { border-left-color: #e67e22; }
+body.dark-mode .budget-card.danger  { border-left-color: #e74c3c; }
 
-/* DARK MODE */
-body.dark-mode .budget-overview {
-  background-color: #16213e !important;
-  color: #f1f1f1 !important;
-  box-shadow: none !important;
-}
-body.dark-mode .budget-section-header h3 { color: #f1f1f1 !important; }
-body.dark-mode .manage-btn {
-  background: #1a1a2e !important;
-  border-color: #0f3460 !important;
-  color: #a5b1c2 !important;
-}
-body.dark-mode .manage-btn:hover {
-  background: #3498db !important;
-  color: white !important;
-}
-body.dark-mode .budget-empty {
-  background: #1a1a2e !important;
-  border-color: #0f3460 !important;
-}
-body.dark-mode .empty-title { color: #f1f1f1 !important; }
-body.dark-mode .empty-desc  { color: #a5b1c2 !important; }
-body.dark-mode .budget-card {
-  background: #1a1a2e !important;
-  border-left-color: #0f3460 !important;
-}
-body.dark-mode .budget-category-name { color: #f1f1f1 !important; }
-body.dark-mode .budget-amounts        { color: #a5b1c2 !important; }
-body.dark-mode .budget-amounts strong { color: #f1f1f1 !important; }
-body.dark-mode .remaining-label       { color: #a5b1c2 !important; }
-body.dark-mode .progress-track        { background: #0f3460 !important; }
+body.dark-mode .cat-icon.good    { background: rgba(46,  204, 113, 0.2); }
+body.dark-mode .cat-icon.warning { background: rgba(230, 126,  34, 0.2); }
+body.dark-mode .cat-icon.danger  { background: rgba(231,  76,  60, 0.2); }
+
+body.dark-mode .cat-name           { color: #f1f1f1; }
+body.dark-mode .cat-amounts        { color: #a5b1c2; }
+body.dark-mode .cat-amounts strong { color: #f1f1f1; }
+
+body.dark-mode .alert-badge.warning { background: rgba(230,126,34,0.2);  color: #e67e22; border-color: rgba(230,126,34,0.4); }
+body.dark-mode .alert-badge.danger  { background: rgba(231, 76,60,0.2);  color: #e74c3c; border-color: rgba(231, 76,60,0.4); }
+
+body.dark-mode .progress-track { background: #0f3460; }
+
+body.dark-mode .pct-label.good    { background: rgba(46,  204,113,0.2); color: #2ecc71; }
+body.dark-mode .pct-label.warning { background: rgba(230, 126, 34,0.2); color: #e67e22; }
+body.dark-mode .pct-label.danger  { background: rgba(231,  76, 60,0.2); color: #e74c3c; }
+
+body.dark-mode .remaining-text         { color: #a5b1c2; }
+body.dark-mode .remaining-text.exceeded { color: #e74c3c; }
 </style>
