@@ -73,7 +73,7 @@
           @open-manage="isRecurringModalOpen = true"
           @delete-recurring="handleDeleteRecurring"
           @edit-recurring="openEditRecurring"
-          @generate-now="checkAndGenerateRecurring(true)"
+          @generate-now="checkAndGenerateRecurring(true, referenceDate)"
         />
 
         <BudgetOverview
@@ -583,8 +583,8 @@ const handleDeleteBudget = async (id) => {
 }
 
 // --- RECURENTE: LOAD, SAVE, DELETE ---
-const checkAndGenerateRecurring = async (manual = false) => {
-  const now = new Date()
+const checkAndGenerateRecurring = async (manual = false, overrideDate = null) => {
+  const now = overrideDate ? new Date(overrideDate) : new Date()
   const nowYear  = now.getFullYear()
   const nowMonth = now.getMonth() + 1
   const nowDay   = now.getDate()
