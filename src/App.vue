@@ -68,6 +68,12 @@
           @rates-loaded="handleRates"
         />
 
+        <RecurringList
+          :recurringTransactions="recurringTransactions"
+          @open-manage="isRecurringModalOpen = true"
+          @delete-recurring="handleDeleteRecurring"
+        />
+
         <BudgetOverview
           :budgets="budgets"
           :spentByCategory="spentByCategory"
@@ -123,6 +129,20 @@
     </div>
   </div>
 
+ <div v-if="isRecurringModalOpen" class="modal-overlay" @click.self="isRecurringModalOpen = false">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🔄 {{ currentLang === 'ro' ? 'Gestionează Recurente' : 'Manage Recurring' }}</h3>
+        <button class="close-btn" @click="isRecurringModalOpen = false">×</button>
+      </div>
+      <RecurringForm
+        :recurringTransactions="recurringTransactions"
+        @save-recurring="handleSaveRecurring"
+        @delete-recurring="handleDeleteRecurring"
+      />
+    </div>
+  </div>
+
  <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
       <div class="modal-content">
         <div class="modal-header">
@@ -155,6 +175,8 @@ import ExpenseChart from './components/ExpenseChart.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import BudgetOverview from './components/BudgetOverview.vue'
 import BudgetForm from './components/BudgetForm.vue'
+import RecurringList from './components/RecurringList.vue'
+import RecurringForm from './components/RecurringForm.vue'
 // Stări aplicație
 const user = ref(null)
 const transactions = ref([])
