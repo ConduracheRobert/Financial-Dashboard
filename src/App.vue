@@ -235,18 +235,22 @@ const openEditModal = (item) => {
 // --- LOGICĂ TRANZACȚII ---
 const handleSaveTransaction = async (transaction) => {
   if (user.value.uid === 'local_guest') {
-    // Dacă e vizitator, salvăm doar local
-    transactions.value.push(transaction)
+    if (transaction.id) {
+      const idx = transactions.value.findIndex(t => t.id === transaction.id)
+      if (idx !== -1) transactions.value[idx] = { ...transaction }
+    } else {
+      transactions.value.push({ ...transaction, id: Date.now().toString() })
+    }
     localStorage.setItem('guest_transactions', JSON.stringify(transactions.value))
   } else {
-    // Creăm o copie a datelor pe care vrem să le salvăm
-    const dataToSave = { ...transaction, uid: user.value.uid }
-    
-    // Ștergem câmpul 'id' din pachet ca să nu mai comenteze Firebase
-    delete dataToSave.id 
+    const { id, ...dataToSave } = transaction
+    dataToSave.uid = user.value.uid
 
-    // Trimitem pachetul curat!
-    await addDoc(collection(db, 'transactions'), dataToSave)
+    if (id) {
+      await updateDoc(doc(db, 'transactions', id), dataToSave)
+    } else {
+      await addDoc(collection(db, 'transactions'), dataToSave)
+    }
   }
 }
 // --- INTERNAȚIONALIZARE (LIMBĂ) ---
