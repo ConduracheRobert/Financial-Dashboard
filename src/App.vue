@@ -68,9 +68,16 @@
           @rates-loaded="handleRates"
         />
 
-        <ExpenseChart 
-          :transactions="displayListTransactions" 
-          :currentFilter="activeCardFilter" 
+        <BudgetOverview
+          :budgets="[]"
+          :spentByCategory="{}"
+          :daysRemaining="0"
+          @open-manage="isBudgetModalOpen = true"
+        />
+
+        <ExpenseChart
+          :transactions="displayListTransactions"
+          :currentFilter="activeCardFilter"
         />
 
         <div class="transactions-section">
@@ -97,6 +104,20 @@
     </div>
 
  <ToastContainer :toasts="toasts" />
+
+ <div v-if="isBudgetModalOpen" class="modal-overlay" @click.self="isBudgetModalOpen = false">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🎯 {{ currentLang === 'ro' ? 'Gestionează Bugete' : 'Manage Budgets' }}</h3>
+        <button class="close-btn" @click="isBudgetModalOpen = false">×</button>
+      </div>
+      <BudgetForm
+        :budgets="[]"
+        @save-budget="() => {}"
+        @delete-budget="() => {}"
+      />
+    </div>
+  </div>
 
  <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
       <div class="modal-content">
@@ -128,6 +149,8 @@ import TransactionList from './components/TransactionList.vue'
 import TransactionFilters from './components/TransactionFilters.vue'
 import ExpenseChart from './components/ExpenseChart.vue'
 import ToastContainer from './components/ToastContainer.vue'
+import BudgetOverview from './components/BudgetOverview.vue'
+import BudgetForm from './components/BudgetForm.vue'
 // Stări aplicație
 const user = ref(null)
 const transactions = ref([])
@@ -142,6 +165,7 @@ const globalRates = ref({ EUR: 1, USD: 1 })
 // NOU: Stări pentru interfața modernă
 const isSidebarOpen = ref(false)
 const isModalOpen = ref(false)
+const isBudgetModalOpen = ref(false)
 
 // --- SISTEM TOAST NOTIFICĂRI ---
 const toasts = ref([])
