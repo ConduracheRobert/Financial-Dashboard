@@ -55,24 +55,3 @@ defineEmits(['delete-transaction', 'edit-transaction'])
 .delete-btn { background: transparent; border: none; cursor: pointer; font-size: 18px; opacity: 0.5; transition: 0.2s; }
 .delete-btn:hover { opacity: 1; transform: scale(1.1); }
 </style>
-
-<style scoped>
-/* CSS-ul a rămas același ca înainte */
-.smart-form { display: flex; flex-direction: column; gap: 20px; }
-.error-banner { background: #ffeaa7; color: #d63031; padding: 10px 15px; border-radius: 8px; font-size: 14px; font-weight: 500; border-left: 4px solid #d63031; animation: shake 0.3s ease-in-out; }
-.type-toggle { display: flex; gap: 10px; background: #f1f3f5; padding: 5px; border-radius: 12px; }
-.toggle-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 8px; font-weight: bold; color: #7f8c8d; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.toggle-btn.income.active { background: white; color: #2ecc71; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.2); }
-.toggle-btn.expense.active { background: white; color: #e74c3c; box-shadow: 0 4px 10px rgba(231, 76, 60, 0.2); }
-.form-grid { display: flex; flex-direction: column; gap: 15px; }
-.input-group { display: flex; flex-direction: column; gap: 5px; }
-.input-group label { font-size: 13px; font-weight: bold; color: #34495e; text-transform: uppercase; letter-spacing: 0.5px; }
-.input-group input, .input-group select { padding: 12px 15px; border: 1px solid #dcdde1; border-radius: 8px; font-size: 15px; transition: 0.2s; outline: none; background: white; color: #2c3e50; font-family: inherit; }
-.input-group input:focus, .input-group select:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
-.submit-btn { margin-top: 10px; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; color: white; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
-.submit-btn.income { background: #2ecc71; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
-.submit-btn.income:hover { background: #27ae60; }
-.submit-btn.expense { background: #e74c3c; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); }
-.submit-btn.expense:hover { background: #c0392b; }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-</style>
