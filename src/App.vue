@@ -72,6 +72,8 @@
           :budgets="budgets"
           :spentByCategory="spentByCategory"
           :daysRemaining="daysRemaining"
+          :selectedYear="selectedYear"
+          :selectedMonth="selectedMonth"
           @open-manage="isBudgetModalOpen = true"
         />
 
@@ -567,11 +569,14 @@ const displayListTransactions = computed(() => {
 
 // --- BUGETE COMPUTED PROPERTIES ---
 
-// Cheltuielile userului curent din LUNA CALENDARISTICA CURENTA (independent de TimeNavigator)
+// Anul si luna selectate in TimeNavigator (0-indexed pentru luna)
+const selectedYear  = computed(() => new Date(referenceDate.value).getFullYear())
+const selectedMonth = computed(() => new Date(referenceDate.value).getMonth())
+
+// Cheltuielile userului curent din luna/anul selectat in TimeNavigator
 const currentMonthTransactions = computed(() => {
-  const now = new Date()
-  const year  = now.getFullYear()
-  const month = now.getMonth() // 0-indexed
+  const year  = selectedYear.value
+  const month = selectedMonth.value
   return transactions.value.filter(t => {
     if (t.amount >= 0) return false // ignoram veniturile
     const d = new Date(t.date)
@@ -633,12 +638,20 @@ const spentByCategory = computed(() => {
 
 const daysRemaining = computed(() => {
   const today = new Date()
-  const currentYear = today.getFullYear()
-  const currentMonth = today.getMonth()
-  const lastDay = new Date(currentYear, currentMonth + 1, 0)
-  const msPerDay = 24 * 60 * 60 * 1000
-  const daysLeft = Math.ceil((lastDay - today) / msPerDay)
-  return Math.max(0, daysLeft)
+  const curYear  = today.getFullYear()
+  const curMonth = today.getMonth()
+  const selYear  = selectedYear.value
+  const selMonth = selectedMonth.value
+  const lastDay  = new Date(selYear, selMonth + 1, 0) // ultima zi din luna selectata
+
+  if (selYear < curYear || (selYear === curYear && selMonth < curMonth)) {
+    return 0 // luna trecuta
+  } else if (selYear === curYear && selMonth === curMonth) {
+    // luna curenta — zile reale ramase
+    return Math.max(0, Math.ceil((lastDay - today) / (24 * 60 * 60 * 1000)))
+  } else {
+    return lastDay.getDate() // luna viitoare — nr total de zile
+  }
 })
 // --- FUNCȚIA DE EXPORT EXCEL/CSV ---
 const exportCSV = () => {

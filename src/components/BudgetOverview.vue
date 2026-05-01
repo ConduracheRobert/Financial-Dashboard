@@ -90,7 +90,9 @@ const isRo = computed(() => t.value.locale === 'ro-RO')
 const props = defineProps({
   budgets:         { type: Array,  required: true },
   spentByCategory: { type: Object, required: true },
-  daysRemaining:   { type: Number, required: true }
+  daysRemaining:   { type: Number, required: true },
+  selectedYear:    { type: Number, required: true },
+  selectedMonth:   { type: Number, required: true }  // 0-indexed
 })
 
 defineEmits(['open-manage'])
@@ -107,8 +109,9 @@ const CATEGORY_EMOJI = {
   'Altele':            '📦'
 }
 
+// Construim data din props pentru a afisa luna selectata in TimeNavigator
 const currentMonthLabel = computed(() => {
-  const d = new Date()
+  const d = new Date(props.selectedYear, props.selectedMonth, 1)
   return d.toLocaleDateString(t.value.locale, { month: 'long', year: 'numeric' })
 })
 
