@@ -66,13 +66,14 @@
 </template>
 
 <script setup>
-import { ref, computed, inject } from 'vue'
+import { ref, computed, watch, inject } from 'vue'
 
 const t = inject('t')
 const isRo = computed(() => t.value.locale === 'ro-RO')
 
 const props = defineProps({
-  budgets: { type: Array, required: true }
+  budgets:            { type: Array,  required: true },
+  preselectCategory:  { type: String, default: '' }
 })
 
 const emit = defineEmits(['save-budget', 'delete-budget'])
@@ -86,6 +87,14 @@ const selectedCategory = ref('')
 const limitAmount = ref('')
 const editingId = ref(null)
 const errorMsg = ref('')
+
+watch(() => props.preselectCategory, (val) => {
+  if (val) {
+    editingId.value = null
+    selectedCategory.value = val
+    errorMsg.value = ''
+  }
+}, { immediate: true })
 
 const availableCategories = computed(() => {
   const usedCategories = props.budgets

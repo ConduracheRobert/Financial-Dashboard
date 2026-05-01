@@ -1,12 +1,19 @@
 <template>
   <div class="toast-container">
     <TransitionGroup name="toast">
-      <div 
-        v-for="toast in toasts" 
-        :key="toast.id" 
+      <div
+        v-for="toast in toasts"
+        :key="toast.id"
         :class="['toast-message', toast.type]"
       >
-        {{ toast.message }}
+        <span class="toast-text">{{ toast.message }}</span>
+        <button
+          v-if="toast.action"
+          class="toast-action-btn"
+          @click="toast.action.handler()"
+        >
+          {{ toast.action.label }}
+        </button>
       </div>
     </TransitionGroup>
   </div>
@@ -35,6 +42,7 @@ defineProps({
 
 .toast-message {
   min-width: 250px;
+  max-width: 380px;
   padding: 15px 20px;
   border-radius: 8px;
   color: white;
@@ -43,7 +51,25 @@ defineProps({
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   display: flex;
   align-items: center;
+  gap: 12px;
 }
+
+.toast-text { flex: 1; }
+
+.toast-action-btn {
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.5);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.toast-action-btn:hover { background: rgba(255,255,255,0.45); }
 
 .toast-message.success { background-color: #2ecc71; }
 .toast-message.error { background-color: #e74c3c; }

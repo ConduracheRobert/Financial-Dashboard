@@ -108,14 +108,15 @@
 
  <ToastContainer :toasts="toasts" />
 
- <div v-if="isBudgetModalOpen" class="modal-overlay" @click.self="isBudgetModalOpen = false">
+ <div v-if="isBudgetModalOpen" class="modal-overlay" @click.self="closeBudgetModal">
     <div class="modal-content">
       <div class="modal-header">
         <h3>🎯 {{ currentLang === 'ro' ? 'Gestionează Bugete' : 'Manage Budgets' }}</h3>
-        <button class="close-btn" @click="isBudgetModalOpen = false">×</button>
+        <button class="close-btn" @click="closeBudgetModal">×</button>
       </div>
       <BudgetForm
         :budgets="budgets"
+        :preselectCategory="budgetPreselectCategory"
         @save-budget="handleSaveBudget"
         @delete-budget="handleDeleteBudget"
       />
@@ -174,15 +175,20 @@ const lastAlertMonth = ref(new Date().getMonth())
 const isSidebarOpen = ref(false)
 const isModalOpen = ref(false)
 const isBudgetModalOpen = ref(false)
+const budgetPreselectCategory = ref('')
+const closeBudgetModal = () => {
+  isBudgetModalOpen.value = false
+  budgetPreselectCategory.value = ''
+}
 
 // --- SISTEM TOAST NOTIFICĂRI ---
 const toasts = ref([])
-const addToast = (message, type = 'info') => {
+const addToast = (message, type = 'info', duration = 4000, action = null) => {
   const id = Date.now()
-  toasts.value.push({ id, message, type })
+  toasts.value.push({ id, message, type, action })
   setTimeout(() => {
     toasts.value = toasts.value.filter(t => t.id !== id)
-  }, 4000)
+  }, duration)
 }
 // --- TEMĂ (DARK/LIGHT MODE) ---
 const isDarkMode = ref(localStorage.getItem('theme') === 'dark')
@@ -402,6 +408,28 @@ const handleSaveAndClose = async (data) => {
         : (currentLang.value === 'ro' ? '✅ Tranzacție adăugată cu succes!' : '✅ Transaction added successfully!'),
       'success'
     )
+
+    if (!isEdit && data.amount < 0) {
+      const hasBudget = budgets.value.some(b => b.category === data.category)
+      if (!hasBudget) {
+        const catLabel = t.value.catMap[data.category] || data.category
+        const category = data.category
+        addToast(
+          currentLang.value === 'ro'
+            ? `💡 Ai cheltuit pe ${catLabel}. Vrei să îți setezi un buget pentru ea?`
+            : `💡 You spent on ${catLabel}. Want to set a budget for it?`,
+          'info',
+          7000,
+          {
+            label: currentLang.value === 'ro' ? 'Setează buget' : 'Set budget',
+            handler: () => {
+              budgetPreselectCategory.value = category
+              isBudgetModalOpen.value = true
+            }
+          }
+        )
+      }
+    }
   } catch (error) {
     console.error("EROARE LA SALVAREA ÎN FIREBASE:", error)
     addToast(
