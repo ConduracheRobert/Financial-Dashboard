@@ -26,11 +26,6 @@
       @open-manage="openBudgetModal"
     />
 
-    <ExpenseChart
-      :transactions="displayListTransactions"
-      :currentFilter="activeCardFilter"
-    />
-
     <div class="transactions-section">
       <div class="list-header">
         <h3>{{ t.latestTransactions }}</h3>
@@ -59,7 +54,6 @@ import { inject } from 'vue'
 import DashboardSummary from '../components/DashboardSummary.vue'
 import RecurringList from '../components/RecurringList.vue'
 import BudgetOverview from '../components/BudgetOverview.vue'
-import ExpenseChart from '../components/ExpenseChart.vue'
 import TransactionFilters from '../components/TransactionFilters.vue'
 import TransactionList from '../components/TransactionList.vue'
 
