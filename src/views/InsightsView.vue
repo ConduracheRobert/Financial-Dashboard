@@ -92,6 +92,88 @@
         </div>
       </section>
 
+      <!-- GRUP 4: Analiza lunii selectate -->
+      <section class="insights-card">
+        <div class="card-header">
+          <h3>🔍 {{ isRo ? 'Analiza Lunii Selectate' : 'Selected Month Analysis' }}</h3>
+          <p class="card-subtitle">{{ selectedMonthLabel }}</p>
+        </div>
+
+        <div v-if="selectedMonthExpenses.length === 0" class="no-data-msg">
+          {{ isRo ? 'Nicio cheltuiala inregistrata in aceasta luna.' : 'No expenses recorded this month.' }}
+        </div>
+
+        <div v-else class="insights-grid">
+
+          <!-- A: Comparatie luna -->
+          <div class="ig-card ig-wide">
+            <div class="ig-icon">📊</div>
+            <div class="ig-label">{{ isRo ? 'Fata de luna anterioara' : 'vs Previous Month' }}</div>
+            <div class="ig-main-val">{{ fmtAmt(monthComparison.current) }}</div>
+            <div class="ig-sub">
+              <span class="ig-prev">{{ isRo ? 'Luna ant:' : 'Prev:' }} {{ fmtAmt(monthComparison.prev) }}</span>
+              <span v-if="monthComparison.change !== null"
+                    :class="['ig-badge', monthComparison.change > 0 ? 'badge-red' : 'badge-green']">
+                {{ monthComparison.change > 0 ? '▲' : '▼' }} {{ Math.abs(monthComparison.change) }}%
+              </span>
+              <span v-else class="ig-badge badge-neutral">{{ isRo ? 'Fara date anterioare' : 'No prior data' }}</span>
+            </div>
+          </div>
+
+          <!-- B: Ziua saptamanii -->
+          <div class="ig-card">
+            <div class="ig-icon">📅</div>
+            <div class="ig-label">{{ isRo ? 'Ziua cu cele mai mari cheltuieli' : 'Most expensive day' }}</div>
+            <div v-if="mostExpensiveDayOfWeek" class="ig-main-val">{{ mostExpensiveDayOfWeek.day }}</div>
+            <div v-if="mostExpensiveDayOfWeek" class="ig-sub">
+              <span class="ig-prev">{{ fmtAmt(mostExpensiveDayOfWeek.amount) }}</span>
+            </div>
+            <div v-else class="ig-empty-sub">{{ isRo ? 'Insuficiente date' : 'Not enough data' }}</div>
+          </div>
+
+          <!-- C: Streak -->
+          <div class="ig-card">
+            <div class="ig-icon">🔥</div>
+            <div class="ig-label">{{ isRo ? 'Zile consecutive fara cheltuieli' : 'Expense-free streak' }}</div>
+            <div class="ig-main-val">{{ longestExpenseStreak }}</div>
+            <div class="ig-sub">
+              <span class="ig-prev">{{ isRo ? 'zile' : 'days' }}</span>
+            </div>
+          </div>
+
+          <!-- D: Cea mai mare cheltuiala -->
+          <div class="ig-card ig-wide">
+            <div class="ig-icon">💸</div>
+            <div class="ig-label">{{ isRo ? 'Cea mai mare cheltuiala' : 'Biggest expense' }}</div>
+            <div class="ig-main-val">{{ fmtAmt(biggestExpense?.amount || 0) }}</div>
+            <div class="ig-sub">
+              <span class="ig-prev">{{ biggestExpense?.name }}</span>
+              <span class="ig-prev">·</span>
+              <span class="ig-prev">{{ biggestExpense ? new Date(biggestExpense.date).toLocaleDateString(isRo ? 'ro-RO' : 'en-US') : '' }}</span>
+            </div>
+            <div class="ig-tag">{{ biggestExpense ? (t.catMap?.[biggestExpense.category] || biggestExpense.category) : '' }}</div>
+          </div>
+
+          <!-- E: Top 3 categorii -->
+          <div class="ig-card ig-wide">
+            <div class="ig-icon">🏷️</div>
+            <div class="ig-label">{{ isRo ? 'Top 3 categorii luna aceasta' : 'Top 3 categories this month' }}</div>
+            <div v-if="topCategoriesSelectedMonth.length === 0" class="ig-empty-sub">
+              {{ isRo ? 'Nicio cheltuiala' : 'No expenses' }}
+            </div>
+            <div v-else class="ig-cat-list">
+              <div v-for="(cat, i) in topCategoriesSelectedMonth" :key="cat.name" class="ig-cat-row">
+                <span class="ig-cat-dot" :style="{ background: EXPENSE_COLORS[i] }"></span>
+                <span class="ig-cat-name">{{ cat.label }}</span>
+                <span class="ig-cat-pct">{{ cat.percent }}%</span>
+                <span class="ig-cat-amt">{{ fmtAmt(cat.amount) }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
     </template>
   </div>
 </template>
@@ -338,6 +420,104 @@ const bestMonth = computed(() => {
   if (best.savings === -Infinity) return { label: '-' }
   return { label: monthLabel(best.year, best.month) }
 })
+
+// --- GRUP 4: Analiza lunii selectate ---
+const selYear  = computed(() => referenceDate.value.getFullYear())
+const selMonth = computed(() => referenceDate.value.getMonth())
+
+const selectedMonthLabel = computed(() =>
+  new Date(selYear.value, selMonth.value, 1).toLocaleDateString(
+    isRo.value ? 'ro-RO' : 'en-US', { month: 'long', year: 'numeric' }
+  )
+)
+
+const selectedMonthExpenses = computed(() =>
+  allTransactions.value.filter(tx => {
+    const d = new Date(tx.date)
+    return d.getFullYear() === selYear.value && d.getMonth() === selMonth.value && tx.amount < 0
+  })
+)
+
+const prevMonthExpenses = computed(() => {
+  const prev = new Date(selYear.value, selMonth.value - 1, 1)
+  return allTransactions.value.filter(tx => {
+    const d = new Date(tx.date)
+    return d.getFullYear() === prev.getFullYear() && d.getMonth() === prev.getMonth() && tx.amount < 0
+  })
+})
+
+// A) Comparatie cu luna anterioara
+const monthComparison = computed(() => {
+  const current = selectedMonthExpenses.value.reduce((s, tx) => s + Math.abs(toAct(tx.amount)), 0)
+  const prev    = prevMonthExpenses.value.reduce((s, tx) => s + Math.abs(toAct(tx.amount)), 0)
+  const change  = prev > 0 ? Math.round(((current - prev) / prev) * 100) : null
+  return { current, prev, change }
+})
+
+// B) Ziua saptamanii cu cele mai mari cheltuieli (ultimele 4 sapt fata de sfarsitul lunii selectate)
+const mostExpensiveDayOfWeek = computed(() => {
+  const endOfMonth = new Date(selYear.value, selMonth.value + 1, 0)
+  const cutoff = new Date(endOfMonth)
+  cutoff.setDate(cutoff.getDate() - 27)
+  const dayMap = {}
+  allTransactions.value.forEach(tx => {
+    if (tx.amount >= 0) return
+    const d = new Date(tx.date)
+    if (d < cutoff || d > endOfMonth) return
+    const dow = d.getDay()
+    if (!dayMap[dow]) dayMap[dow] = 0
+    dayMap[dow] += Math.abs(toAct(tx.amount))
+  })
+  if (!Object.keys(dayMap).length) return null
+  const [dow, amount] = Object.entries(dayMap).reduce((a, b) => b[1] > a[1] ? b : a)
+  const RO = ['Duminica','Luni','Marti','Miercuri','Joi','Vineri','Sambata']
+  const EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+  return { day: (isRo.value ? RO : EN)[parseInt(dow)], amount }
+})
+
+// C) Streak zile fara cheltuieli in luna selectata
+const longestExpenseStreak = computed(() => {
+  const daysInMonth = new Date(selYear.value, selMonth.value + 1, 0).getDate()
+  const today = new Date()
+  const isCurrentMonth = selYear.value === today.getFullYear() && selMonth.value === today.getMonth()
+  const endDay = isCurrentMonth ? today.getDate() : daysInMonth
+  const expenseDays = new Set(selectedMonthExpenses.value.map(tx => new Date(tx.date).getDate()))
+  let max = 0, cur = 0
+  for (let d = 1; d <= endDay; d++) {
+    if (!expenseDays.has(d)) { cur++; if (cur > max) max = cur }
+    else cur = 0
+  }
+  return max
+})
+
+// D) Cea mai mare cheltuiala din luna selectata
+const biggestExpense = computed(() => {
+  if (!selectedMonthExpenses.value.length) return null
+  return selectedMonthExpenses.value.reduce((mx, tx) =>
+    Math.abs(tx.amount) > Math.abs(mx.amount) ? tx : mx
+  )
+})
+
+// E) Top 3 categorii in luna selectata
+const topCategoriesSelectedMonth = computed(() => {
+  const map = {}
+  selectedMonthExpenses.value.forEach(tx => {
+    const cat = tx.category || 'Altele'
+    if (!map[cat]) map[cat] = 0
+    map[cat] += Math.abs(toAct(tx.amount))
+  })
+  const total = Object.values(map).reduce((s, v) => s + v, 0)
+  if (total === 0) return []
+  return Object.entries(map)
+    .map(([name, amount]) => ({
+      name,
+      label: t.value.catMap?.[name] || name,
+      amount,
+      percent: Math.round((amount / total) * 100)
+    }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3)
+})
 </script>
 
 <style scoped>
@@ -535,6 +715,62 @@ body.dark-mode .kpi-lbl   { color: #6c7a89 !important; }
 
 body.dark-mode .no-data-msg { color: #6c7a89 !important; }
 
+/* GRUP 4: Insights grid */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.ig-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid #f1f3f5;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ig-wide { grid-column: span 2; }
+
+.ig-icon  { font-size: 22px; }
+.ig-label { font-size: 11px; font-weight: 700; color: #95a5a6; text-transform: uppercase; letter-spacing: 0.4px; line-height: 1.3; }
+.ig-main-val { font-size: 22px; font-weight: 700; color: #2c3e50; margin-top: 2px; }
+.ig-sub  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.ig-prev { font-size: 12px; color: #7f8c8d; }
+.ig-empty-sub { font-size: 13px; color: #bdc3c7; margin-top: 4px; }
+.ig-tag  { font-size: 11px; background: rgba(52,152,219,0.1); color: #2980b9; padding: 2px 8px; border-radius: 20px; align-self: flex-start; font-weight: 600; }
+
+.ig-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.badge-red   { background: rgba(231,76,60,0.12);  color: #e74c3c; }
+.badge-green { background: rgba(46,204,113,0.12); color: #27ae60; }
+.badge-neutral { background: #f1f3f5; color: #95a5a6; }
+
+.ig-cat-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.ig-cat-row  { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.ig-cat-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ig-cat-name { flex: 1; color: #34495e; font-weight: 500; }
+.ig-cat-pct  { color: #7f8c8d; font-size: 12px; width: 36px; text-align: right; }
+.ig-cat-amt  { font-weight: 600; color: #2c3e50; font-size: 12px; width: 80px; text-align: right; }
+
+/* dark mode grup 4 */
+body.dark-mode .ig-card       { background: #1a1a2e !important; border-color: #0f3460 !important; }
+body.dark-mode .ig-main-val   { color: #f1f1f1 !important; }
+body.dark-mode .ig-label      { color: #6c7a89 !important; }
+body.dark-mode .ig-prev       { color: #a5b1c2 !important; }
+body.dark-mode .ig-empty-sub  { color: #4a5568 !important; }
+body.dark-mode .ig-tag        { background: rgba(52,152,219,0.15) !important; color: #3498db !important; }
+body.dark-mode .badge-neutral { background: #0f3460 !important; color: #a5b1c2 !important; }
+body.dark-mode .ig-cat-name   { color: #dfe6e9 !important; }
+body.dark-mode .ig-cat-amt    { color: #dfe6e9 !important; }
+body.dark-mode .ig-cat-pct    { color: #6c7a89 !important; }
+
 @media (max-width: 700px) {
   .category-content { flex-direction: column; }
   .pie-container { width: 140px; align-self: center; }
@@ -542,5 +778,7 @@ body.dark-mode .no-data-msg { color: #6c7a89 !important; }
   .cat-name { width: 80px; }
   .cat-amt { width: 65px; }
   .header-row { flex-direction: column; }
+  .insights-grid { grid-template-columns: repeat(2, 1fr); }
+  .ig-wide { grid-column: span 2; }
 }
 </style>
