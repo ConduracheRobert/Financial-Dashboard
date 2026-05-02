@@ -223,13 +223,13 @@ const noData = computed(() => !allTransactions.value || allTransactions.value.le
 
 // --- GRUP 1: Categorii ---
 const last12Expenses = computed(() => {
-  const anchor = referenceDate.value
+  const anchor = new Date(referenceDate.value)
   const cutoff = new Date(anchor.getFullYear(), anchor.getMonth() - 11, 1)
   return allTransactions.value.filter(tx => new Date(tx.date) >= cutoff && tx.amount < 0)
 })
 
 const last12Incomes = computed(() => {
-  const anchor = referenceDate.value
+  const anchor = new Date(referenceDate.value)
   const cutoff = new Date(anchor.getFullYear(), anchor.getMonth() - 11, 1)
   return allTransactions.value.filter(tx => new Date(tx.date) >= cutoff && tx.amount > 0)
 })
@@ -324,7 +324,7 @@ const pieOptions = {
 // --- GRUP 2: Evolutie lunara ---
 const last6MonthsSlots = computed(() => {
   const slots = []
-  const anchor = referenceDate.value
+  const anchor = new Date(referenceDate.value)
   for (let i = 5; i >= 0; i--) {
     const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1)
     slots.push({ year: d.getFullYear(), month: d.getMonth() })
@@ -422,8 +422,8 @@ const bestMonth = computed(() => {
 })
 
 // --- GRUP 4: Analiza lunii selectate ---
-const selYear  = computed(() => referenceDate.value.getFullYear())
-const selMonth = computed(() => referenceDate.value.getMonth())
+const selYear  = computed(() => new Date(referenceDate.value).getFullYear())
+const selMonth = computed(() => new Date(referenceDate.value).getMonth())
 
 const selectedMonthLabel = computed(() =>
   new Date(selYear.value, selMonth.value, 1).toLocaleDateString(
