@@ -4,7 +4,12 @@
     <!-- Lista existenta -->
     <div v-if="recurringTransactions.length > 0" class="existing-list">
       <h4>{{ isRo ? 'Recurențe active' : 'Active recurring' }}</h4>
-      <div v-for="r in recurringTransactions" :key="r.id" class="recurring-row">
+      <div
+        v-for="r in recurringTransactions"
+        :key="r.id"
+        class="recurring-row"
+        :class="{ editing: editingItem?.id === r.id }"
+      >
         <div class="row-info">
           <span class="row-name">{{ r.name }}</span>
           <span class="row-meta">
@@ -13,7 +18,10 @@
             · {{ isRo ? 'ziua' : 'day' }} {{ r.dayOfMonth }}
           </span>
         </div>
-        <button class="icon-btn delete" @click="$emit('delete-recurring', r.id)">🗑️</button>
+        <div class="row-actions">
+          <button class="icon-btn edit" @click="startEdit(r)" :title="isRo ? 'Editează' : 'Edit'">✏️</button>
+          <button class="icon-btn delete" @click="$emit('delete-recurring', r.id)" :title="isRo ? 'Șterge' : 'Delete'">🗑️</button>
+        </div>
       </div>
       <hr class="divider" />
     </div>
@@ -21,7 +29,7 @@
     <!-- Formular adaugare / editare -->
     <div class="recurring-form">
       <h4>
-        {{ editingRecurring
+        {{ editingItem
           ? (isRo ? '✏️ Editează recurență' : '✏️ Edit recurring')
           : (isRo ? '+ Adaugă recurență nouă' : '+ Add new recurring') }}
       </h4>
@@ -108,11 +116,11 @@
       </div>
 
       <div class="form-actions">
-        <button v-if="editingRecurring" class="cancel-btn" @click="$emit('cancel-edit')">
+        <button v-if="editingItem" class="cancel-btn" @click="cancelEdit">
           {{ isRo ? 'Anulează' : 'Cancel' }}
         </button>
         <button class="submit-btn" @click="submitForm">
-          {{ editingRecurring
+          {{ editingItem
             ? (isRo ? '💾 Salvează modificările' : '💾 Save changes')
             : (isRo ? '+ Adaugă recurență' : '+ Add recurring') }}
         </button>
@@ -146,12 +154,15 @@ const frequencyForm   = ref('lunar')
 const dayOfMonthForm  = ref('')
 const monthOfYearForm = ref(1)
 const errorMsg        = ref('')
+const editingItem     = ref(null)
 
 const availableCategories = computed(() =>
   tipForm.value === 'venit' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 )
 
 const resetForm = () => {
+  editingItem.value     = null
+  tipForm.value         = 'cheltuiala'
   nameForm.value        = ''
   amountForm.value      = ''
   categoryForm.value    = ''
@@ -161,19 +172,26 @@ const resetForm = () => {
   errorMsg.value        = ''
 }
 
+const startEdit = (r) => {
+  editingItem.value     = r
+  tipForm.value         = r.amount < 0 ? 'cheltuiala' : 'venit'
+  nameForm.value        = r.name
+  amountForm.value      = Math.abs(r.amount)
+  categoryForm.value    = r.category
+  frequencyForm.value   = r.frequency
+  dayOfMonthForm.value  = r.dayOfMonth
+  monthOfYearForm.value = r.monthOfYear || 1
+  errorMsg.value        = ''
+}
+
+const cancelEdit = () => {
+  resetForm()
+  emit('cancel-edit')
+}
+
 watch(() => props.editingRecurring, (val) => {
-  if (val) {
-    tipForm.value         = val.amount < 0 ? 'cheltuiala' : 'venit'
-    nameForm.value        = val.name
-    amountForm.value      = Math.abs(val.amount)
-    categoryForm.value    = val.category
-    frequencyForm.value   = val.frequency
-    dayOfMonthForm.value  = val.dayOfMonth
-    monthOfYearForm.value = val.monthOfYear || 1
-    errorMsg.value        = ''
-  } else {
-    resetForm()
-  }
+  if (val) startEdit(val)
+  else resetForm()
 }, { immediate: true })
 
 const submitForm = () => {
@@ -212,7 +230,7 @@ const submitForm = () => {
     dayOfMonth:  dayOfMonthForm.value,
     monthOfYear: frequencyForm.value === 'anual' ? monthOfYearForm.value : null
   }
-  if (props.editingRecurring?.id) payload.id = props.editingRecurring.id
+  if (editingItem.value?.id) payload.id = editingItem.value.id
 
   emit('save-recurring', payload)
   resetForm()
@@ -242,21 +260,29 @@ const submitForm = () => {
   margin-bottom: 6px;
   border: 1px solid #f1f3f5;
 }
-.row-info { display: flex; flex-direction: column; gap: 2px; }
+.row-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .row-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
 .row-meta { font-size: 12px; color: #7f8c8d; }
+
+.row-actions { display: flex; gap: 2px; flex-shrink: 0; }
+
+.recurring-row.editing {
+  border-color: #3498db !important;
+  background: rgba(52, 152, 219, 0.06) !important;
+}
 
 .icon-btn {
   background: transparent;
   border: none;
-  font-size: 16px;
+  font-size: 15px;
   cursor: pointer;
-  opacity: 0.5;
+  opacity: 0.45;
   transition: 0.2s;
-  padding: 4px;
+  padding: 4px 6px;
   border-radius: 4px;
 }
-.icon-btn:hover { opacity: 1; }
+.icon-btn:hover        { opacity: 1; }
+.icon-btn.edit:hover   { background: rgba(52, 152, 219, 0.12); }
 .icon-btn.delete:hover { background: rgba(231, 76, 60, 0.1); }
 
 .divider { border: none; border-top: 1px solid #f1f3f5; margin: 4px 0; }
@@ -345,9 +371,11 @@ const submitForm = () => {
 .cancel-btn:hover { background: #e2e6ea; }
 
 /* DARK MODE */
-body.dark-mode .recurring-row     { background: #1a1a2e !important; border-color: #0f3460 !important; }
-body.dark-mode .row-name          { color: #f1f1f1 !important; }
-body.dark-mode .row-meta          { color: #a5b1c2 !important; }
+body.dark-mode .recurring-row          { background: #1a1a2e !important; border-color: #0f3460 !important; }
+body.dark-mode .recurring-row.editing  { background: rgba(52,152,219,0.1) !important; border-color: #3498db !important; }
+body.dark-mode .row-name               { color: #f1f1f1 !important; }
+body.dark-mode .row-meta               { color: #a5b1c2 !important; }
+body.dark-mode .icon-btn.edit:hover    { background: rgba(52,152,219,0.2) !important; }
 body.dark-mode .existing-list h4,
 body.dark-mode .recurring-form h4 { color: #a5b1c2 !important; }
 body.dark-mode .divider           { border-top-color: #0f3460 !important; }
