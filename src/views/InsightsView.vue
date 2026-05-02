@@ -174,6 +174,73 @@
         </div>
       </section>
 
+      <!-- GRUP 5: Analiza AI -->
+      <section class="insights-card ai-card">
+        <div class="card-header">
+          <div class="header-row">
+            <div>
+              <h3>🤖 {{ isRo ? 'Analiza AI Personalizata' : 'AI Personal Analysis' }}</h3>
+              <p class="card-subtitle">Powered by Google Gemini</p>
+            </div>
+            <button
+              class="ai-btn"
+              :disabled="aiLoading || allTransactions.length < 5"
+              @click="analyzeWithAI"
+            >
+              {{ aiLoading
+                ? (isRo ? 'Se analizeaza...' : 'Analyzing...')
+                : aiResult
+                  ? (isRo ? '🔄 Regenereaza analiza' : '🔄 Regenerate analysis')
+                  : (isRo ? '✨ Analizeaza cu AI' : '✨ AI Analysis') }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Date insuficiente -->
+        <div v-if="allTransactions.length < 5" class="ai-state ai-insufficient">
+          <div class="ai-state-icon">📊</div>
+          <p>{{ isRo
+            ? 'Adauga mai multe tranzactii pentru o analiza AI relevanta (minim 5).'
+            : 'Add more transactions for a relevant AI analysis (minimum 5).' }}</p>
+        </div>
+
+        <!-- Stare initiala -->
+        <div v-else-if="!aiResult && !aiLoading && !aiError" class="ai-state ai-idle">
+          <div class="ai-state-icon">🤖</div>
+          <p>{{ isRo
+            ? 'Apasa butonul pentru a primi o analiza financiara personalizata bazata pe datele tale reale.'
+            : 'Press the button to get a personalized financial analysis based on your real data.' }}</p>
+        </div>
+
+        <!-- Loading -->
+        <div v-else-if="aiLoading" class="ai-state ai-loading">
+          <div class="ai-spinner"></div>
+          <p>{{ isRo ? 'Se analizeaza datele tale...' : 'Analyzing your data...' }}</p>
+        </div>
+
+        <!-- Eroare -->
+        <div v-else-if="aiError" class="ai-state ai-error">
+          <div class="ai-state-icon">⚠️</div>
+          <p>{{ aiError }}</p>
+          <button class="ai-retry-btn" @click="analyzeWithAI">
+            {{ isRo ? 'Incearca din nou' : 'Try again' }}
+          </button>
+        </div>
+
+        <!-- Rezultat -->
+        <div v-else class="ai-result">
+          <div class="ai-timestamp">
+            {{ isRo ? 'Analiza generata la' : 'Analysis generated at' }} {{ aiTimestamp }}
+          </div>
+          <div class="ai-text">
+            <template v-for="(item, i) in aiFormattedLines" :key="i">
+              <h4 v-if="item.isHeader" class="ai-section-head" v-html="item.html"></h4>
+              <p v-else class="ai-para" v-html="item.html"></p>
+            </template>
+          </div>
+        </div>
+      </section>
+
     </template>
   </div>
 </template>
@@ -190,9 +257,10 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 
 const t = inject('t')
 const allTransactions = inject('transactions')
-const activeCurrency = inject('activeCurrency')
-const globalRates = inject('globalRates')
-const referenceDate = inject('referenceDate')
+const activeCurrency  = inject('activeCurrency')
+const globalRates     = inject('globalRates')
+const referenceDate   = inject('referenceDate')
+const budgets         = inject('budgets')
 
 const isRo = computed(() => t.value.locale === 'ro-RO')
 
@@ -518,6 +586,103 @@ const topCategoriesSelectedMonth = computed(() => {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3)
 })
+
+// --- GRUP 5: Analiza AI ---
+const aiLoading   = ref(false)
+const aiResult    = ref('')
+const aiError     = ref('')
+const aiTimestamp = ref('')
+
+const aiFormattedLines = computed(() => {
+  if (!aiResult.value) return []
+  return aiResult.value
+    .replace(/<[^>]+>/g, '')  // strip html
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0)
+    .map(l => ({
+      html: l
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>'),
+      isHeader: /^[0-9]+[.)]\s/.test(l) || /^#+\s/.test(l)
+    }))
+})
+
+const analyzeWithAI = async () => {
+  if (allTransactions.value.length < 5) return
+
+  aiLoading.value = true
+  aiResult.value  = ''
+  aiError.value   = ''
+
+  const anchor = new Date(referenceDate.value)
+  const cutoff = new Date(anchor.getFullYear(), anchor.getMonth() - 2, 1)
+  const last3  = allTransactions.value.filter(tx => new Date(tx.date) >= cutoff)
+
+  const totalIncome  = last3.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0)
+  const totalExpense = last3.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0)
+
+  // Top 3 categorii (ultimele 3 luni, RON brut)
+  const catMap3 = {}
+  last3.filter(tx => tx.amount < 0).forEach(tx => {
+    const cat = t.value.catMap?.[tx.category] || tx.category || 'Altele'
+    if (!catMap3[cat]) catMap3[cat] = 0
+    catMap3[cat] += Math.abs(tx.amount)
+  })
+  const top3Str = Object.entries(catMap3)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([c, v]) => `${c}: ${Math.round(v)} RON`)
+    .join(', ') || 'insuficiente date'
+
+  // Comparatie luna curenta vs anterioara (RON brut)
+  const curExp  = selectedMonthExpenses.value.reduce((s, tx) => s + Math.abs(tx.amount), 0)
+  const prevExp = prevMonthExpenses.value.reduce((s, tx) => s + Math.abs(tx.amount), 0)
+
+  const budgetStr = budgets.value.length > 0
+    ? budgets.value.map(b => `${t.value.catMap?.[b.category] || b.category}: limita ${b.limitAmount} RON`).join(', ')
+    : 'Niciun buget configurat'
+
+  const dataStr = [
+    `Rata de economisire (ultimele 6 luni): ${savingsRate.value}%`,
+    `Venit total ultimele 3 luni: ${Math.round(totalIncome)} RON`,
+    `Cheltuieli totale ultimele 3 luni: ${Math.round(totalExpense)} RON`,
+    `Top 3 categorii cheltuieli (3 luni): ${top3Str}`,
+    `Luna ${selectedMonthLabel.value}: cheltuieli ${Math.round(curExp)} RON`,
+    `Luna precedenta: cheltuieli ${Math.round(prevExp)} RON`,
+    `Bugete active: ${budgetStr}`,
+    `Total tranzactii inregistrate: ${allTransactions.value.length}`
+  ].join('\n')
+
+  const prompt = `Esti un asistent financiar personal. Analizeaza datele financiare ale utilizatorului si ofera o analiza personalizata in limba romana. Fii concret, foloseste cifrele reale din date, si ofera 3-5 observatii actionabile. Nu fi generic. Structureaza raspunsul in: 1) Rezumat general (2-3 fraze), 2) Puncte forte, 3) Puncte de atentie, 4) Recomandari concrete. Raspunde in maximum 300 de cuvinte.\n\nDate financiare:\n${dataStr}`
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      }
+    )
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    const data = await resp.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (text) {
+      aiResult.value = text
+      const now = new Date()
+      aiTimestamp.value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+    } else {
+      throw new Error('empty response')
+    }
+  } catch {
+    aiError.value = isRo.value
+      ? 'Eroare la conectarea cu AI. Verifica conexiunea la internet sau cheia API.'
+      : 'Error connecting to AI. Check your internet connection or API key.'
+  } finally {
+    aiLoading.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -770,6 +935,104 @@ body.dark-mode .badge-neutral { background: #0f3460 !important; color: #a5b1c2 !
 body.dark-mode .ig-cat-name   { color: #dfe6e9 !important; }
 body.dark-mode .ig-cat-amt    { color: #dfe6e9 !important; }
 body.dark-mode .ig-cat-pct    { color: #6c7a89 !important; }
+
+/* GRUP 5: Analiza AI */
+.ai-card { border: 1px solid rgba(102,126,234,0.2); }
+
+.ai-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ai-btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(102,126,234,0.4); }
+.ai-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.ai-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 36px 20px;
+  text-align: center;
+}
+.ai-state-icon { font-size: 40px; }
+.ai-state p    { font-size: 14px; color: #7f8c8d; max-width: 440px; line-height: 1.6; margin: 0; }
+
+.ai-loading { }
+.ai-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid rgba(102,126,234,0.25);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: aiSpin 0.75s linear infinite;
+}
+@keyframes aiSpin { to { transform: rotate(360deg); } }
+
+.ai-error p { color: #e74c3c !important; }
+.ai-retry-btn {
+  padding: 8px 18px;
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.ai-retry-btn:hover { background: rgba(231,76,60,0.08); }
+
+.ai-result { padding-top: 4px; }
+.ai-timestamp {
+  font-size: 11px;
+  color: #95a5a6;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-timestamp::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #2ecc71;
+  border-radius: 50%;
+}
+
+.ai-text { display: flex; flex-direction: column; gap: 8px; }
+.ai-section-head {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 10px 0 2px 0;
+  padding-left: 10px;
+  border-left: 3px solid #667eea;
+}
+.ai-para {
+  font-size: 14px;
+  color: #34495e;
+  line-height: 1.65;
+  margin: 0;
+  padding-left: 2px;
+}
+
+/* dark mode AI */
+body.dark-mode .ai-card       { border-color: rgba(102,126,234,0.25) !important; }
+body.dark-mode .ai-state p    { color: #6c7a89 !important; }
+body.dark-mode .ai-timestamp  { color: #6c7a89 !important; }
+body.dark-mode .ai-section-head { color: #f1f1f1 !important; }
+body.dark-mode .ai-para       { color: #dfe6e9 !important; }
 
 @media (max-width: 700px) {
   .category-content { flex-direction: column; }
