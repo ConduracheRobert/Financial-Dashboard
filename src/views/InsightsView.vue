@@ -110,6 +110,7 @@ const t = inject('t')
 const allTransactions = inject('transactions')
 const activeCurrency = inject('activeCurrency')
 const globalRates = inject('globalRates')
+const referenceDate = inject('referenceDate')
 
 const isRo = computed(() => t.value.locale === 'ro-RO')
 
@@ -140,14 +141,14 @@ const noData = computed(() => !allTransactions.value || allTransactions.value.le
 
 // --- GRUP 1: Categorii ---
 const last12Expenses = computed(() => {
-  const cutoff = new Date()
-  cutoff.setMonth(cutoff.getMonth() - 12)
+  const anchor = referenceDate.value
+  const cutoff = new Date(anchor.getFullYear(), anchor.getMonth() - 11, 1)
   return allTransactions.value.filter(tx => new Date(tx.date) >= cutoff && tx.amount < 0)
 })
 
 const last12Incomes = computed(() => {
-  const cutoff = new Date()
-  cutoff.setMonth(cutoff.getMonth() - 12)
+  const anchor = referenceDate.value
+  const cutoff = new Date(anchor.getFullYear(), anchor.getMonth() - 11, 1)
   return allTransactions.value.filter(tx => new Date(tx.date) >= cutoff && tx.amount > 0)
 })
 
@@ -241,9 +242,9 @@ const pieOptions = {
 // --- GRUP 2: Evolutie lunara ---
 const last6MonthsSlots = computed(() => {
   const slots = []
-  const now = new Date()
+  const anchor = referenceDate.value
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1)
     slots.push({ year: d.getFullYear(), month: d.getMonth() })
   }
   return slots
