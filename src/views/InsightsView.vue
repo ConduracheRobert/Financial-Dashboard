@@ -9,25 +9,40 @@
 
     <template v-else>
 
-      <!-- GRUP 1: Distributia cheltuielilor pe categorii -->
+      <!-- GRUP 1: Distributia categoriilor cu toggle -->
       <section class="insights-card">
         <div class="card-header">
-          <h3>🍕 {{ isRo ? 'Distributia Cheltuielilor' : 'Spending Distribution' }}</h3>
-          <p class="card-subtitle">{{ isRo ? 'Ultimele 12 luni, pe categorii' : 'Last 12 months, by category' }}</p>
+          <div class="header-row">
+            <div>
+              <h3>🍕 {{ pieTitle }}</h3>
+              <p class="card-subtitle">{{ pieSubtitle }}</p>
+            </div>
+            <div class="pie-mode-tabs">
+              <button :class="['mode-btn', { active: pieMode === 'expense' }]" @click="pieMode = 'expense'">
+                {{ isRo ? 'Cheltuieli' : 'Expenses' }}
+              </button>
+              <button :class="['mode-btn', { active: pieMode === 'income' }]" @click="pieMode = 'income'">
+                {{ isRo ? 'Venituri' : 'Income' }}
+              </button>
+              <button :class="['mode-btn', { active: pieMode === 'all' }]" @click="pieMode = 'all'">
+                {{ isRo ? 'Ambele' : 'All' }}
+              </button>
+            </div>
+          </div>
         </div>
-        <div v-if="topCategories.length === 0" class="no-data-msg">
-          {{ isRo ? 'Nicio cheltuiala inregistrata in ultimele 12 luni.' : 'No expenses recorded in the last 12 months.' }}
+        <div v-if="currentPieCategories.length === 0" class="no-data-msg">
+          {{ pieEmptyMsg }}
         </div>
         <div v-else class="category-content">
           <div class="pie-container">
             <Pie :data="categoryChartData" :options="pieOptions" />
           </div>
           <div class="category-list">
-            <div v-for="(cat, i) in topCategories" :key="cat.name" class="cat-row">
-              <span class="cat-dot" :style="{ background: COLORS[i % COLORS.length] }"></span>
+            <div v-for="(cat, i) in currentPieCategories" :key="cat.name" class="cat-row">
+              <span class="cat-dot" :style="{ background: currentPieColors[i] }"></span>
               <span class="cat-name">{{ cat.label }}</span>
               <div class="cat-bar-track">
-                <div class="cat-bar-fill" :style="{ width: cat.percent + '%', background: COLORS[i % COLORS.length] }"></div>
+                <div class="cat-bar-fill" :style="{ width: cat.percent + '%', background: currentPieColors[i] }"></div>
               </div>
               <span class="cat-pct">{{ cat.percent }}%</span>
               <span class="cat-amt">{{ fmtAmt(cat.amount) }}</span>
@@ -82,7 +97,7 @@
 </template>
 
 <script setup>
-import { computed, inject } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { Pie, Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS, ArcElement, Tooltip, Legend,
@@ -98,10 +113,10 @@ const globalRates = inject('globalRates')
 
 const isRo = computed(() => t.value.locale === 'ro-RO')
 
-const COLORS = [
-  '#3498db', '#e74c3c', '#2ecc71', '#f39c12',
-  '#9b59b6', '#1abc9c', '#e67e22', '#e91e63'
-]
+const EXPENSE_COLORS = ['#e74c3c','#e67e22','#f39c12','#e91e63','#c0392b','#d35400','#f1c40f','#ff6b6b']
+const INCOME_COLORS  = ['#2ecc71','#3498db','#1abc9c','#27ae60','#2980b9','#16a085','#8e44ad','#00cec9']
+
+const pieMode = ref('expense')
 
 const toAct = (amount) => {
   if (activeCurrency.value === 'EUR' && globalRates.value?.EUR) return amount / globalRates.value.EUR
@@ -130,9 +145,15 @@ const last12Expenses = computed(() => {
   return allTransactions.value.filter(tx => new Date(tx.date) >= cutoff && tx.amount < 0)
 })
 
-const topCategories = computed(() => {
+const last12Incomes = computed(() => {
+  const cutoff = new Date()
+  cutoff.setMonth(cutoff.getMonth() - 12)
+  return allTransactions.value.filter(tx => new Date(tx.date) >= cutoff && tx.amount > 0)
+})
+
+const buildCategories = (txList) => {
   const map = {}
-  last12Expenses.value.forEach(tx => {
+  txList.forEach(tx => {
     const cat = tx.category || 'Altele'
     if (!map[cat]) map[cat] = 0
     map[cat] += Math.abs(toAct(tx.amount))
@@ -148,13 +169,57 @@ const topCategories = computed(() => {
     }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 7)
+}
+
+const topExpenseCategories = computed(() => buildCategories(last12Expenses.value))
+const topIncomeCategories  = computed(() => buildCategories(last12Incomes.value))
+
+const currentPieCategories = computed(() => {
+  if (pieMode.value === 'expense') return topExpenseCategories.value
+  if (pieMode.value === 'income')  return topIncomeCategories.value
+  // 'all': combine both, recalc percent from combined total
+  const combined = [
+    ...topExpenseCategories.value.map(c => ({ ...c, _type: 'expense' })),
+    ...topIncomeCategories.value.map(c => ({ ...c, _type: 'income' }))
+  ]
+  const total = combined.reduce((s, c) => s + c.amount, 0)
+  if (total === 0) return []
+  return combined.map(c => ({ ...c, percent: Math.round((c.amount / total) * 100) }))
+})
+
+const currentPieColors = computed(() => {
+  if (pieMode.value === 'expense') return topExpenseCategories.value.map((_, i) => EXPENSE_COLORS[i % EXPENSE_COLORS.length])
+  if (pieMode.value === 'income')  return topIncomeCategories.value.map((_, i) => INCOME_COLORS[i % INCOME_COLORS.length])
+  return [
+    ...topExpenseCategories.value.map((_, i) => EXPENSE_COLORS[i % EXPENSE_COLORS.length]),
+    ...topIncomeCategories.value.map((_, i) => INCOME_COLORS[i % INCOME_COLORS.length])
+  ]
+})
+
+const pieTitle = computed(() => {
+  if (pieMode.value === 'expense') return isRo.value ? 'Distributia Cheltuielilor' : 'Spending Distribution'
+  if (pieMode.value === 'income')  return isRo.value ? 'Distributia Veniturilor'   : 'Income Distribution'
+  return isRo.value ? 'Distributia Categoriilor' : 'Category Distribution'
+})
+
+const pieSubtitle = computed(() => {
+  const base = isRo.value ? 'Ultimele 12 luni' : 'Last 12 months'
+  if (pieMode.value === 'expense') return `${base}, ${isRo.value ? 'cheltuieli' : 'expenses'}`
+  if (pieMode.value === 'income')  return `${base}, ${isRo.value ? 'venituri' : 'income'}`
+  return `${base}, ${isRo.value ? 'toate categoriile' : 'all categories'}`
+})
+
+const pieEmptyMsg = computed(() => {
+  if (pieMode.value === 'expense') return isRo.value ? 'Nicio cheltuiala in ultimele 12 luni.' : 'No expenses in the last 12 months.'
+  if (pieMode.value === 'income')  return isRo.value ? 'Niciun venit in ultimele 12 luni.'     : 'No income in the last 12 months.'
+  return isRo.value ? 'Nicio tranzactie in ultimele 12 luni.' : 'No transactions in the last 12 months.'
 })
 
 const categoryChartData = computed(() => ({
-  labels: topCategories.value.map(c => c.label),
+  labels: currentPieCategories.value.map(c => c.label),
   datasets: [{
-    data: topCategories.value.map(c => c.amount),
-    backgroundColor: topCategories.value.map((_, i) => COLORS[i % COLORS.length]),
+    data: currentPieCategories.value.map(c => c.amount),
+    backgroundColor: currentPieColors.value,
     borderWidth: 2,
     borderColor: 'rgba(0,0,0,0.15)'
   }]
@@ -303,6 +368,41 @@ const bestMonth = computed(() => {
 .card-header h3 { margin: 0 0 4px 0; font-size: 17px; color: #2c3e50; }
 .card-subtitle { margin: 0; font-size: 13px; color: #95a5a6; }
 
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Pie mode toggle */
+.pie-mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f1f3f5;
+  padding: 4px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.mode-btn {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #7f8c8d;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.mode-btn.active {
+  background: white;
+  color: #2c3e50;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.mode-btn:not(.active):hover { color: #34495e; }
+
 /* GRUP 1 */
 .no-data-msg { color: #95a5a6; font-size: 14px; text-align: center; padding: 20px; }
 
@@ -415,6 +515,10 @@ body.dark-mode .empty-insights p  { color: #a5b1c2 !important; }
 body.dark-mode .card-header h3 { color: #f1f1f1 !important; }
 body.dark-mode .card-subtitle  { color: #6c7a89 !important; }
 
+body.dark-mode .pie-mode-tabs { background: #0f3460 !important; }
+body.dark-mode .mode-btn      { color: #a5b1c2 !important; }
+body.dark-mode .mode-btn.active { background: #1a1a2e !important; color: #f1f1f1 !important; box-shadow: none !important; }
+
 body.dark-mode .cat-name  { color: #dfe6e9 !important; }
 body.dark-mode .cat-amt   { color: #dfe6e9 !important; }
 body.dark-mode .cat-pct   { color: #6c7a89 !important; }
@@ -436,5 +540,6 @@ body.dark-mode .no-data-msg { color: #6c7a89 !important; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .cat-name { width: 80px; }
   .cat-amt { width: 65px; }
+  .header-row { flex-direction: column; }
 }
 </style>
