@@ -151,6 +151,16 @@ const availableCategories = computed(() =>
   tipForm.value === 'venit' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 )
 
+const resetForm = () => {
+  nameForm.value        = ''
+  amountForm.value      = ''
+  categoryForm.value    = ''
+  frequencyForm.value   = 'lunar'
+  dayOfMonthForm.value  = ''
+  monthOfYearForm.value = 1
+  errorMsg.value        = ''
+}
+
 watch(() => props.editingRecurring, (val) => {
   if (val) {
     tipForm.value         = val.amount < 0 ? 'cheltuiala' : 'venit'
@@ -165,16 +175,6 @@ watch(() => props.editingRecurring, (val) => {
     resetForm()
   }
 }, { immediate: true })
-
-const resetForm = () => {
-  nameForm.value        = ''
-  amountForm.value      = ''
-  categoryForm.value    = ''
-  frequencyForm.value   = 'lunar'
-  dayOfMonthForm.value  = ''
-  monthOfYearForm.value = 1
-  errorMsg.value        = ''
-}
 
 const submitForm = () => {
   errorMsg.value = ''
