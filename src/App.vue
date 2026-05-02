@@ -870,6 +870,8 @@ const exportCSV = () => {
 }
 
 // --- PROVIDE PENTRU VIEWS ---
+provide('transactions', transactions)
+provide('globalRates', globalRates)
 provide('viewUnit', viewUnit)
 provide('referenceDate', referenceDate)
 provide('activeCurrency', activeCurrency)
