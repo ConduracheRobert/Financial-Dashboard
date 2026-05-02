@@ -40,16 +40,22 @@
         @update:selectedCategory="setSelectedCategory"
       />
       <TransactionList
-        :transactions="displayListTransactions"
+        :transactions="latestTen"
         @delete-transaction="handleDeleteTransaction"
         @edit-transaction="openEditModal"
       />
+      <div v-if="displayListTransactions.length > 10" class="history-link-row">
+        <RouterLink to="/history" class="history-link">
+          {{ t.locale === 'ro-RO' ? `📋 Vezi istoricul complet (${displayListTransactions.length} tranzactii)` : `📋 View full history (${displayListTransactions.length} transactions)` }}
+        </RouterLink>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { inject } from 'vue'
+import { inject, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 
 import DashboardSummary from '../components/DashboardSummary.vue'
 import RecurringList from '../components/RecurringList.vue'
@@ -88,6 +94,8 @@ const openBudgetModal = inject('openBudgetModal')
 const openRecurringModal = inject('openRecurringModal')
 
 const generateNow = () => checkAndGenerateRecurring(true, referenceDate.value)
+
+const latestTen = computed(() => displayListTransactions.value.slice(0, 10))
 </script>
 
 <style scoped>
@@ -122,4 +130,10 @@ body.dark-mode .transactions-section { background: #16213e; box-shadow: none; }
 body.dark-mode .list-header h3 { color: #f1f1f1; }
 body.dark-mode .export-btn { background: #1a1a2e; border-color: #0f3460; color: #a5b1c2; }
 body.dark-mode .export-btn:hover { background: #3498db; color: white; border-color: #3498db; }
+
+.history-link-row { text-align: center; margin-top: 14px; }
+.history-link { color: #3498db; font-size: 13px; font-weight: 600; text-decoration: none; padding: 8px 18px; border-radius: 20px; background: rgba(52,152,219,0.08); transition: 0.2s; display: inline-block; }
+.history-link:hover { background: rgba(52,152,219,0.18); }
+body.dark-mode .history-link { background: rgba(52,152,219,0.12) !important; }
+body.dark-mode .history-link:hover { background: rgba(52,152,219,0.25) !important; }
 </style>

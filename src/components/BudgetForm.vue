@@ -78,10 +78,12 @@ const props = defineProps({
 
 const emit = defineEmits(['save-budget', 'delete-budget'])
 
-const ALL_EXPENSE_KEYS = [
+const BASE_EXPENSE_KEYS = [
   'Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături',
   'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Altele'
 ]
+const customCategories = inject('customCategories', ref({ expense: [], income: [] }))
+const ALL_EXPENSE_KEYS = computed(() => [...BASE_EXPENSE_KEYS, ...customCategories.value.expense])
 
 const selectedCategory = ref('')
 const limitAmount = ref('')
@@ -100,7 +102,7 @@ const availableCategories = computed(() => {
   const usedCategories = props.budgets
     .filter(b => b.id !== editingId.value)
     .map(b => b.category)
-  return ALL_EXPENSE_KEYS.filter(k => !usedCategories.includes(k))
+  return ALL_EXPENSE_KEYS.value.filter(k => !usedCategories.includes(k))
 })
 
 const startEdit = (budget) => {

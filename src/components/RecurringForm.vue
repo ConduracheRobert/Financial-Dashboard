@@ -143,8 +143,11 @@ const props = defineProps({
 
 const emit = defineEmits(['save-recurring', 'delete-recurring', 'cancel-edit'])
 
-const EXPENSE_CATEGORIES = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Altele']
-const INCOME_CATEGORIES  = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele']
+const BASE_EXPENSE_CAT = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Altele']
+const BASE_INCOME_CAT  = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele']
+const customCategories = inject('customCategories', ref({ expense: [], income: [] }))
+const EXPENSE_CATEGORIES = computed(() => [...BASE_EXPENSE_CAT, ...customCategories.value.expense])
+const INCOME_CATEGORIES  = computed(() => [...BASE_INCOME_CAT,  ...customCategories.value.income])
 
 const tipForm         = ref('cheltuiala')
 const nameForm        = ref('')
@@ -157,7 +160,7 @@ const errorMsg        = ref('')
 const editingItem     = ref(null)
 
 const availableCategories = computed(() =>
-  tipForm.value === 'venit' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+  tipForm.value === 'venit' ? INCOME_CATEGORIES.value : EXPENSE_CATEGORIES.value
 )
 
 const resetForm = () => {

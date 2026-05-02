@@ -47,8 +47,8 @@
         <nav class="sidebar-nav">
           <RouterLink to="/" exactActiveClass="active" @click="isSidebarOpen = false">📊 {{ t.dashboard }}</RouterLink>
           <RouterLink to="/insights" activeClass="active" @click="isSidebarOpen = false">📈 {{ t.insights }}</RouterLink>
-          <a href="#">📝 {{ t.history }}</a>
-          <a href="#">⚙️ {{ t.settings }}</a>
+          <RouterLink to="/history" activeClass="active" @click="isSidebarOpen = false">📝 {{ t.history }}</RouterLink>
+          <RouterLink to="/settings" activeClass="active" @click="isSidebarOpen = false">⚙️ {{ t.settings }}</RouterLink>
         </nav>
       </aside>
 
@@ -123,7 +123,7 @@ import { ref, computed, onMounted, provide, watch } from 'vue'
 import { RouterView, RouterLink } from 'vue-router'
 import { db, auth } from './firebase'
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth'
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc, getDocs } from 'firebase/firestore'
 
 import TimeNavigator from './components/TimeNavigator.vue'
 import TransactionForm from './components/TransactionForm.vue'
@@ -137,6 +137,23 @@ const viewUnit = ref('month')
 const referenceDate = ref(new Date().toISOString().split('T')[0])
 const searchQuery = ref('')
 const selectedCategory = ref('')
+
+// Categorii custom (localStorage)
+const customCategories = ref(
+  JSON.parse(localStorage.getItem('custom_categories') || '{"expense":[],"income":[]}')
+)
+const addCustomCategory = (name, type) => {
+  const trimmed = name.trim()
+  if (!trimmed) return
+  if (!customCategories.value[type].includes(trimmed)) {
+    customCategories.value[type].push(trimmed)
+    localStorage.setItem('custom_categories', JSON.stringify(customCategories.value))
+  }
+}
+const deleteCustomCategory = (name, type) => {
+  customCategories.value[type] = customCategories.value[type].filter(c => c !== name)
+  localStorage.setItem('custom_categories', JSON.stringify(customCategories.value))
+}
 const activeCardFilter = ref(null)
 const activeCurrency = ref('RON')
 const globalRates = ref({ EUR: 1, USD: 1 })
@@ -834,6 +851,34 @@ const daysRemaining = computed(() => {
     return lastDay.getDate() // luna viitoare — nr total de zile
   }
 })
+// --- STERGERE DATE ---
+const deleteAllTransactions = async () => {
+  try {
+    if (user.value?.uid === 'local_guest') {
+      transactions.value = []
+      localStorage.removeItem('guest_transactions')
+    } else {
+      const q = query(collection(db, 'transactions'), where('uid', '==', user.value.uid))
+      const snap = await getDocs(q)
+      await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'transactions', d.id))))
+    }
+    addToast(currentLang.value === 'ro' ? '🗑️ Toate tranzactiile au fost sterse.' : '🗑️ All transactions deleted.', 'success')
+  } catch (e) { addToast('❌ Eroare la stergere.', 'error') }
+}
+const deleteAllBudgets = async () => {
+  try {
+    if (user.value?.uid === 'local_guest') {
+      budgets.value = []
+      localStorage.removeItem('guest_budgets')
+    } else {
+      const q = query(collection(db, 'budgets'), where('uid', '==', user.value.uid))
+      const snap = await getDocs(q)
+      await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'budgets', d.id))))
+    }
+    addToast(currentLang.value === 'ro' ? '🗑️ Toate bugetele au fost sterse.' : '🗑️ All budgets deleted.', 'success')
+  } catch (e) { addToast('❌ Eroare la stergere.', 'error') }
+}
+
 // --- FUNCȚIA DE EXPORT EXCEL/CSV ---
 const exportCSV = () => {
   const BOM = "\uFEFF"
@@ -900,6 +945,16 @@ provide('handleRates', handleRates)
 provide('exportCSV', exportCSV)
 provide('openBudgetModal', () => { isBudgetModalOpen.value = true })
 provide('openRecurringModal', () => { isRecurringModalOpen.value = true })
+
+provide('currentLang', currentLang)
+provide('isDarkMode', isDarkMode)
+provide('toggleLanguage', toggleLanguage)
+provide('toggleTheme', toggleTheme)
+provide('customCategories', customCategories)
+provide('addCustomCategory', addCustomCategory)
+provide('deleteCustomCategory', deleteCustomCategory)
+provide('deleteAllTransactions', deleteAllTransactions)
+provide('deleteAllBudgets', deleteAllBudgets)
 </script>
 
 <style scoped>

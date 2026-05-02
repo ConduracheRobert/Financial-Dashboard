@@ -26,7 +26,7 @@
         <select v-model="category">
           <option disabled value="">{{ t.selectCategoryOpt }}</option>
           <option v-for="key in currentCategoryKeys" :key="key" :value="key">
-            {{ t.catMap[key] }}
+            {{ t.catMap[key] || key }}
           </option>
         </select>
       </div>
@@ -70,10 +70,16 @@ const category = ref('')
 const date = ref(todayString)
 const errorMessage = ref('')
 
-const expenseKeys = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Altele']
-const incomeKeys = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele']
+const BASE_EXPENSE_KEYS = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Altele']
+const BASE_INCOME_KEYS  = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele']
 
-const currentCategoryKeys = computed(() => transactionType.value === 'expense' ? expenseKeys : incomeKeys)
+const customCategories = inject('customCategories', ref({ expense: [], income: [] }))
+
+const currentCategoryKeys = computed(() =>
+  transactionType.value === 'expense'
+    ? [...BASE_EXPENSE_KEYS, ...customCategories.value.expense]
+    : [...BASE_INCOME_KEYS,  ...customCategories.value.income]
+)
 const namePlaceholder = computed(() => transactionType.value === 'expense' ? t.value.placeholderExpense : t.value.placeholderIncome)
 
 // Magia AICI: Când se deschide formularul, verificăm dacă avem date de editat
