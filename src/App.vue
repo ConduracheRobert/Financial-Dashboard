@@ -163,7 +163,7 @@ const globalRates = ref({ EUR: 1, USD: 1 })
 
 // BUGETE - State Management
 const budgets = ref([])
-const alertedBudgets = ref(new Set())
+const alertedBudgets = ref(new Set(JSON.parse(sessionStorage.getItem('alerted_budgets') || '[]')))
 const lastAlertMonth = ref(new Date().getMonth())
 
 // RECURENTE - State Management
@@ -399,9 +399,11 @@ watch(user, (newUser, oldUser) => {
   if (!newUser) {
     budgets.value = []
     alertedBudgets.value.clear()
+    sessionStorage.removeItem('alerted_budgets')
   } else if (oldUser && newUser.uid !== oldUser.uid) {
     budgets.value = []
     alertedBudgets.value.clear()
+    sessionStorage.removeItem('alerted_budgets')
     loadBudgets()
   } else if (!oldUser && newUser) {
     loadBudgets()
@@ -480,6 +482,7 @@ const loadBudgets = () => {
   }
   // Reset alertele la schimbul de user
   alertedBudgets.value = new Set()
+  sessionStorage.removeItem('alerted_budgets')
   lastAlertMonth.value = new Date().getMonth()
 }
 
@@ -515,6 +518,7 @@ const handleSaveBudget = async (budget) => {
     }
     // Reset alertele când se salvează buget nou
     alertedBudgets.value.clear()
+    sessionStorage.removeItem('alerted_budgets')
     addToast(
       currentLang.value === 'ro' ? '✅ Buget salvat cu succes!' : '✅ Budget saved successfully!',
       'success'
@@ -802,6 +806,7 @@ const spentByCategory = computed(() => {
   if (currentMonth !== lastAlertMonth.value) {
     // S-a schimbat luna → resetează alertele
     alertedBudgets.value.clear()
+    sessionStorage.removeItem('alerted_budgets')
     lastAlertMonth.value = currentMonth
   }
   
@@ -814,6 +819,7 @@ const spentByCategory = computed(() => {
       const alertKey = `100_${budget.category}`
       if (!alertedBudgets.value.has(alertKey)) {
         alertedBudgets.value.add(alertKey)
+        sessionStorage.setItem('alerted_budgets', JSON.stringify([...alertedBudgets.value]))
         const catName = t.value.catMap[budget.category] || budget.category
         const msg = currentLang.value === 'ro'
           ? `❌ Buget depășit! Ați cheltuit 100%+ din bugetul pentru ${catName}`
@@ -825,6 +831,7 @@ const spentByCategory = computed(() => {
       const alertKey = `80_${budget.category}`
       if (!alertedBudgets.value.has(alertKey)) {
         alertedBudgets.value.add(alertKey)
+        sessionStorage.setItem('alerted_budgets', JSON.stringify([...alertedBudgets.value]))
         const catName = t.value.catMap[budget.category] || budget.category
         const msg = currentLang.value === 'ro'
           ? `⚠️ Atenție! Ați cheltuit ${percent.toFixed(0)}% din bugetul pentru ${catName}`
