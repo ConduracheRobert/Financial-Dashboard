@@ -53,9 +53,9 @@
       </aside>
 
       <main class="main-content">
-        <TimeNavigator v-model:viewUnit="viewUnit" v-model:referenceDate="referenceDate" />
+        <TimeNavigator v-if="showTimeControls" v-model:viewUnit="viewUnit" v-model:referenceDate="referenceDate" />
 
-        <div class="currency-tabs">
+        <div v-if="showTimeControls" class="currency-tabs">
           <button :class="{ active: activeCurrency === 'RON' }" @click="activeCurrency = 'RON'">🇷🇴 RON</button>
           <button :class="{ active: activeCurrency === 'EUR' }" @click="activeCurrency = 'EUR'">🇪🇺 EUR</button>
           <button :class="{ active: activeCurrency === 'USD' }" @click="activeCurrency = 'USD'">🇺🇸 USD</button>
@@ -120,7 +120,7 @@
 
 <script setup>
 import { ref, computed, onMounted, provide, watch } from 'vue'
-import { RouterView, RouterLink } from 'vue-router'
+import { RouterView, RouterLink, useRoute } from 'vue-router'
 import { db, auth } from './firebase'
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth'
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc, getDocs } from 'firebase/firestore'
@@ -130,6 +130,9 @@ import TransactionForm from './components/TransactionForm.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import BudgetForm from './components/BudgetForm.vue'
 import RecurringForm from './components/RecurringForm.vue'
+const route = useRoute()
+const showTimeControls = computed(() => ['/', '/history'].includes(route.path))
+
 // Stări aplicație
 const user = ref(null)
 const transactions = ref([])
