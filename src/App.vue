@@ -918,7 +918,8 @@ provide('openRecurringModal', () => { isRecurringModalOpen.value = true })
 .logout-btn:hover { background: #c0392b; }
 
 /* MAIN CONTENT */
-.main-content { padding: 25px; max-width: 1200px; margin: 0 auto; }
+.main-content { padding: 25px; max-width: 1440px; margin: 0 auto; width: 100%; }
+@media (min-width: 1600px) { .main-content { max-width: 1600px; padding: 30px 40px; } }
 .transactions-section { margin-top: 30px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .transactions-section h3 { margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f3f5; padding-bottom: 10px; }
 
