@@ -1019,6 +1019,7 @@ provide('deleteAllBudgets', deleteAllBudgets)
 @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Adaptare Dark Mode */
+body.dark-mode { background-color: #1a1a2e !important; }
 body.dark-mode #app-root { background: #1a1a2e; color: #f1f1f1; }
 body.dark-mode .app-header, body.dark-mode .sidebar, body.dark-mode .modal-content, body.dark-mode .transactions-section, body.dark-mode .auth-card { background: #16213e; color: #f1f1f1; }
 body.dark-mode .header-left h2, body.dark-mode .sidebar-header h2, body.dark-mode .modal-header h3, body.dark-mode .auth-card h2 { color: #f1f1f1; }
