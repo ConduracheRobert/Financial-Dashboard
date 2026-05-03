@@ -49,6 +49,7 @@
           <RouterLink to="/insights" activeClass="active" @click="isSidebarOpen = false">📈 {{ t.insights }}</RouterLink>
           <RouterLink to="/history" activeClass="active" @click="isSidebarOpen = false">📝 {{ t.history }}</RouterLink>
           <RouterLink to="/settings" activeClass="active" @click="isSidebarOpen = false">⚙️ {{ t.settings }}</RouterLink>
+          <RouterLink to="/simulator" activeClass="active" @click="isSidebarOpen = false">🧮 {{ t.simulator }}</RouterLink>
         </nav>
       </aside>
 
@@ -333,7 +334,7 @@ const t = computed(() => {
 
   return currentLang.value === 'ro' ? {
     locale: 'ro-RO',
-    dashboard: 'Dashboard', insights: 'Analize', history: 'Istoric Complet', settings: 'Setări', logout: 'Ieșire', menu: 'Meniu',
+    dashboard: 'Dashboard', insights: 'Analize', history: 'Istoric Complet', settings: 'Setări', simulator: 'Simulator', logout: 'Ieșire', menu: 'Meniu',
     latestTransactions: 'Ultimele tranzacții',
     currentBalance: 'Sold Curent', totalIncome: 'Total Venituri', totalExpense: 'Total Cheltuieli',
     globalRate: 'Curs Valutar', otherCurrencies: 'Alte monede (în',
@@ -361,7 +362,7 @@ const t = computed(() => {
     catMap: baseMap // Aici trimitem masca
   } : {
     locale: 'en-US',
-    dashboard: 'Dashboard', insights: 'Insights', history: 'Full History', settings: 'Settings', logout: 'Logout', menu: 'Menu',
+    dashboard: 'Dashboard', insights: 'Insights', history: 'Full History', settings: 'Settings', simulator: 'Simulator', logout: 'Logout', menu: 'Menu',
     latestTransactions: 'Latest Transactions',
     currentBalance: 'Current Balance', totalIncome: 'Total Income', totalExpense: 'Total Expenses',
     globalRate: 'Exchange Rate', otherCurrencies: 'Other currencies (in',
