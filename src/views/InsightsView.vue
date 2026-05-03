@@ -174,6 +174,53 @@
         </div>
       </section>
 
+      <!-- GRUP 4.5: Anomalii detectate -->
+      <section class="insights-card">
+        <div class="card-header">
+          <h3>🔺 {{ isRo ? 'Anomalii Detectate' : 'Detected Anomalies' }}</h3>
+          <p class="card-subtitle">{{ selectedMonthLabel }}</p>
+        </div>
+
+        <div v-if="selectedMonthExpenses.length === 0" class="no-data-msg">
+          {{ isRo ? 'Nicio cheltuiala in aceasta luna.' : 'No expenses this month.' }}
+        </div>
+
+        <div v-else-if="anomalies.length === 0" class="anomaly-clean">
+          <div class="anomaly-clean-icon">✅</div>
+          <p>{{ isRo
+            ? 'Nu am detectat anomalii in aceasta perioada. Cheltuielile tale sunt consistente!'
+            : 'No anomalies detected. Your spending is consistent!' }}</p>
+        </div>
+
+        <div v-else class="anomaly-list">
+          <div v-for="(a, i) in anomalies" :key="i" class="anomaly-card">
+            <div class="anomaly-icon">⚠️</div>
+            <div class="anomaly-body">
+              <div class="anomaly-top">
+                <span class="anomaly-name">{{ a.name }}</span>
+                <span class="anomaly-badge">{{ isRo ? 'Anomalie' : 'Anomaly' }}</span>
+              </div>
+              <div class="anomaly-amounts">
+                <span class="anomaly-amt">{{ fmtAmt(a.amount) }}</span>
+                <span class="anomaly-vs">vs {{ isRo ? 'medie' : 'avg' }} {{ fmtAmt(a.avg) }}</span>
+              </div>
+              <p class="anomaly-msg">
+                <template v-if="a.type === 'transaction'">
+                  {{ isRo
+                    ? `Aceasta cheltuiala e de ${a.ratio}x mai mare decat media ta pe ${a.catLabel}`
+                    : `This expense is ${a.ratio}x higher than your average for ${a.catLabel}` }}
+                </template>
+                <template v-else>
+                  {{ isRo
+                    ? `Totalul ${a.catLabel} din aceasta luna e de ${a.ratio}x fata de media lunara`
+                    : `Total ${a.catLabel} this month is ${a.ratio}x the monthly average` }}
+                </template>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- GRUP 5: Analiza AI -->
       <section class="insights-card ai-card">
         <div class="card-header">
@@ -594,6 +641,72 @@ const topCategoriesSelectedMonth = computed(() => {
     .slice(0, 3)
 })
 
+// --- GRUP 4.5: Anomalii ---
+const anomalies = computed(() => {
+  if (!selectedMonthExpenses.value.length) return []
+
+  const anchor = new Date(referenceDate.value)
+  const catPrev = {}
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1)
+    allTransactions.value
+      .filter(tx => {
+        const td = new Date(tx.date)
+        return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth() && tx.amount < 0
+      })
+      .forEach(tx => {
+        const cat = tx.category || 'Altele'
+        catPrev[cat] = (catPrev[cat] || 0) + Math.abs(toAct(tx.amount))
+      })
+  }
+  const catAvg = Object.fromEntries(Object.entries(catPrev).map(([c, v]) => [c, v / 3]))
+
+  const result = []
+
+  // Tranzactii individuale > 200% din media categoriei
+  selectedMonthExpenses.value.forEach(tx => {
+    const cat = tx.category || 'Altele'
+    const avg = catAvg[cat]
+    if (!avg) return
+    const amt = Math.abs(toAct(tx.amount))
+    if (amt > avg * 2) {
+      result.push({
+        type: 'transaction',
+        name: tx.name,
+        category: cat,
+        amount: amt,
+        avg,
+        ratio: +(amt / avg).toFixed(1),
+        catLabel: t.value.catMap?.[cat] || cat
+      })
+    }
+  })
+
+  // Total categorie in luna selectata > 150% din media lunara
+  const catTotals = {}
+  selectedMonthExpenses.value.forEach(tx => {
+    const cat = tx.category || 'Altele'
+    catTotals[cat] = (catTotals[cat] || 0) + Math.abs(toAct(tx.amount))
+  })
+  Object.entries(catTotals).forEach(([cat, total]) => {
+    const avg = catAvg[cat]
+    if (!avg) return
+    if (total > avg * 1.5) {
+      result.push({
+        type: 'category',
+        name: t.value.catMap?.[cat] || cat,
+        category: cat,
+        amount: total,
+        avg,
+        ratio: +(total / avg).toFixed(1),
+        catLabel: t.value.catMap?.[cat] || cat
+      })
+    }
+  })
+
+  return result.sort((a, b) => b.ratio - a.ratio)
+})
+
 // --- GRUP 5: Analiza AI ---
 const aiLoading   = ref(false)
 const aiResult    = ref('')
@@ -952,6 +1065,52 @@ body.dark-mode .badge-neutral { background: #0f3460 !important; color: #a5b1c2 !
 body.dark-mode .ig-cat-name   { color: #dfe6e9 !important; }
 body.dark-mode .ig-cat-amt    { color: #dfe6e9 !important; }
 body.dark-mode .ig-cat-pct    { color: #6c7a89 !important; }
+
+/* GRUP 4.5: Anomalii */
+.anomaly-clean {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 20px;
+  background: rgba(46,204,113,0.06);
+  border-radius: 10px;
+  border: 1px solid rgba(46,204,113,0.2);
+  text-align: center;
+}
+.anomaly-clean-icon { font-size: 32px; }
+.anomaly-clean p { margin: 0; font-size: 14px; color: #27ae60; font-weight: 500; max-width: 420px; line-height: 1.5; }
+
+.anomaly-list { display: flex; flex-direction: column; gap: 10px; }
+.anomaly-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: rgba(231,76,60,0.05);
+  border: 1px solid rgba(231,76,60,0.15);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.anomaly-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+.anomaly-body { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.anomaly-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.anomaly-name { font-weight: 700; color: #2c3e50; font-size: 14px; }
+.anomaly-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px;
+  border-radius: 99px; background: rgba(231,76,60,0.12); color: #e74c3c;
+  border: 1px solid rgba(231,76,60,0.25); text-transform: uppercase; letter-spacing: 0.4px;
+}
+.anomaly-amounts { display: flex; align-items: baseline; gap: 8px; }
+.anomaly-amt { font-size: 16px; font-weight: 700; color: #e74c3c; }
+.anomaly-vs { font-size: 12px; color: #95a5a6; }
+.anomaly-msg { margin: 0; font-size: 12px; color: #7f8c8d; line-height: 1.5; }
+
+body.dark-mode .anomaly-clean { background: rgba(46,204,113,0.08) !important; border-color: rgba(46,204,113,0.2) !important; }
+body.dark-mode .anomaly-clean p { color: #2ecc71 !important; }
+body.dark-mode .anomaly-card { background: rgba(231,76,60,0.08) !important; border-color: rgba(231,76,60,0.2) !important; }
+body.dark-mode .anomaly-name { color: #f1f1f1 !important; }
+body.dark-mode .anomaly-vs { color: #6c7a89 !important; }
+body.dark-mode .anomaly-msg { color: #a5b1c2 !important; }
 
 /* GRUP 5: Analiza AI */
 .ai-card { border: 1px solid rgba(102,126,234,0.2); }
