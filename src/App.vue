@@ -480,10 +480,6 @@ const loadBudgets = () => {
       budgets.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
     })
   }
-  // Reset alertele la schimbul de user
-  alertedBudgets.value = new Set()
-  sessionStorage.removeItem('alerted_budgets')
-  lastAlertMonth.value = new Date().getMonth()
 }
 
 const handleSaveBudget = async (budget) => {

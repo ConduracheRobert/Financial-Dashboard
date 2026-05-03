@@ -57,9 +57,9 @@ defineProps({
 .toast-text { flex: 1; }
 
 .toast-action-btn {
-  background: rgba(255,255,255,0.25);
-  border: 1px solid rgba(255,255,255,0.5);
-  color: white;
+  background: rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.2);
+  color: inherit;
   padding: 5px 10px;
   border-radius: 6px;
   font-size: 12px;
@@ -69,11 +69,13 @@ defineProps({
   flex-shrink: 0;
   transition: background 0.2s;
 }
-.toast-action-btn:hover { background: rgba(255,255,255,0.45); }
+.toast-action-btn:hover { background: rgba(0,0,0,0.25); }
 
-.toast-message.success { background-color: #2ecc71; }
-.toast-message.error { background-color: #e74c3c; }
-.toast-message.info { background-color: #3498db; }
+.toast-message.success { background-color: #2ecc71; color: white; }
+.toast-message.error   { background-color: #e74c3c; color: white; }
+.toast-message.info    { background-color: #3498db; color: white; }
+.toast-message.warning { background-color: #F59E0B; color: #1E293B; }
+.toast-message.danger  { background-color: #DC2626; color: white; }
 
 /* Definesc animațiile mele de intrare și ieșire pentru notificări */
 .toast-enter-active,
