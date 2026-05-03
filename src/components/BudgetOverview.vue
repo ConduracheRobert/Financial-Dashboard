@@ -134,7 +134,7 @@ const adaptedLabel = computed(() => {
   if (u === 'day')  return isRo.value ? 'RON/zi'   : 'RON/day'
   if (u === 'week') return isRo.value ? 'RON/săpt.' : 'RON/week'
   if (u === 'year') return isRo.value ? 'RON/an'   : 'RON/year'
-  return 'RON/lună'
+  return isRo.value ? 'RON/lună' : 'RON/month'
 })
 
 function adaptValue(monthlyAmount) {
