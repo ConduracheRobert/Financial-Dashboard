@@ -182,17 +182,22 @@
               <h3>🤖 {{ isRo ? 'Analiza AI Personalizata' : 'AI Personal Analysis' }}</h3>
               <p class="card-subtitle">Powered by Google Gemini</p>
             </div>
-            <button
-              class="ai-btn"
-              :disabled="aiLoading || allTransactions.length < 5"
-              @click="analyzeWithAI"
-            >
-              {{ aiLoading
-                ? (isRo ? 'Se analizeaza...' : 'Analyzing...')
-                : aiResult
-                  ? (isRo ? '🔄 Regenereaza analiza' : '🔄 Regenerate analysis')
-                  : (isRo ? '✨ Analizeaza cu AI' : '✨ AI Analysis') }}
-            </button>
+            <div class="ai-btn-wrap">
+              <button
+                class="ai-btn"
+                :disabled="aiLoading || aiCooldown > 0 || allTransactions.length < 5"
+                @click="analyzeWithAI"
+              >
+                {{ aiLoading
+                  ? (isRo ? 'Se analizeaza...' : 'Analyzing...')
+                  : aiResult
+                    ? (isRo ? '🔄 Regenereaza analiza' : '🔄 Regenerate analysis')
+                    : (isRo ? '✨ Analizeaza cu AI' : '✨ AI Analysis') }}
+              </button>
+              <p v-if="aiCooldown > 0" class="ai-cooldown-msg">
+                {{ isRo ? `Poti regenera analiza in ${aiCooldown} secunde` : `You can regenerate in ${aiCooldown} seconds` }}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -222,8 +227,10 @@
         <div v-else-if="aiError" class="ai-state ai-error">
           <div class="ai-state-icon">⚠️</div>
           <p>{{ aiError }}</p>
-          <button class="ai-retry-btn" @click="analyzeWithAI">
-            {{ isRo ? 'Incearca din nou' : 'Try again' }}
+          <button class="ai-retry-btn" :disabled="aiCooldown > 0" @click="analyzeWithAI">
+            {{ aiCooldown > 0
+              ? (isRo ? `Asteapta ${aiCooldown}s...` : `Wait ${aiCooldown}s...`)
+              : (isRo ? 'Incearca din nou' : 'Try again') }}
           </button>
         </div>
 
@@ -592,6 +599,15 @@ const aiLoading   = ref(false)
 const aiResult    = ref('')
 const aiError     = ref('')
 const aiTimestamp = ref('')
+const aiCooldown  = ref(0)
+
+const startCooldown = () => {
+  aiCooldown.value = 30
+  const timer = setInterval(() => {
+    aiCooldown.value--
+    if (aiCooldown.value <= 0) clearInterval(timer)
+  }, 1000)
+}
 
 const aiFormattedLines = computed(() => {
   if (!aiResult.value) return []
@@ -658,7 +674,7 @@ const analyzeWithAI = async () => {
 
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -681,6 +697,7 @@ const analyzeWithAI = async () => {
       : 'Error connecting to AI. Check your internet connection or API key.'
   } finally {
     aiLoading.value = false
+    startCooldown()
   }
 }
 </script>
@@ -955,6 +972,22 @@ body.dark-mode .ig-cat-pct    { color: #6c7a89 !important; }
 .ai-btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(102,126,234,0.4); }
 .ai-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
+.ai-btn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ai-cooldown-msg {
+  font-size: 11px;
+  color: #95a5a6;
+  margin: 0;
+  text-align: right;
+  font-style: italic;
+}
+
 .ai-state {
   display: flex;
   flex-direction: column;
@@ -1028,11 +1061,12 @@ body.dark-mode .ig-cat-pct    { color: #6c7a89 !important; }
 }
 
 /* dark mode AI */
-body.dark-mode .ai-card       { border-color: rgba(102,126,234,0.25) !important; }
-body.dark-mode .ai-state p    { color: #6c7a89 !important; }
-body.dark-mode .ai-timestamp  { color: #6c7a89 !important; }
+body.dark-mode .ai-card         { border-color: rgba(102,126,234,0.25) !important; }
+body.dark-mode .ai-state p      { color: #6c7a89 !important; }
+body.dark-mode .ai-timestamp    { color: #6c7a89 !important; }
 body.dark-mode .ai-section-head { color: #f1f1f1 !important; }
-body.dark-mode .ai-para       { color: #dfe6e9 !important; }
+body.dark-mode .ai-para         { color: #dfe6e9 !important; }
+body.dark-mode .ai-cooldown-msg { color: #4a5568 !important; }
 
 @media (max-width: 700px) {
   .category-content { flex-direction: column; }
