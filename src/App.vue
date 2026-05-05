@@ -49,7 +49,7 @@
           <RouterLink to="/insights" activeClass="active" @click="isSidebarOpen = false">📈 {{ t.insights }}</RouterLink>
           <RouterLink to="/history" activeClass="active" @click="isSidebarOpen = false">📝 {{ t.history }}</RouterLink>
           <RouterLink to="/settings" activeClass="active" @click="isSidebarOpen = false">⚙️ {{ t.settings }}</RouterLink>
-          <RouterLink to="/simulator" activeClass="active" @click="isSidebarOpen = false">🧮 {{ t.simulator }}</RouterLink>
+          <RouterLink to="/import" activeClass="active" @click="isSidebarOpen = false">📥 {{ t.importExtras }}</RouterLink>
         </nav>
       </aside>
 
@@ -334,7 +334,7 @@ const t = computed(() => {
 
   return currentLang.value === 'ro' ? {
     locale: 'ro-RO',
-    dashboard: 'Dashboard', insights: 'Analize', history: 'Istoric Complet', settings: 'Setări', simulator: 'Simulator', logout: 'Ieșire', menu: 'Meniu',
+    dashboard: 'Dashboard', insights: 'Analize', history: 'Istoric Complet', settings: 'Setări', logout: 'Ieșire', menu: 'Meniu', importExtras: 'Import Extras',
     latestTransactions: 'Ultimele tranzacții',
     currentBalance: 'Sold Curent', totalIncome: 'Total Venituri', totalExpense: 'Total Cheltuieli',
     globalRate: 'Curs Valutar', otherCurrencies: 'Alte monede (în',
@@ -359,10 +359,13 @@ const t = computed(() => {
     validationCategory: 'Te rog să selectezi o categorie.',
     validationDate: 'Eroare temporală: Nu poți adăuga o tranzacție din viitor!',
     
+    importTitle: 'Import Extras de Cont',
+    importSubtitle: 'Importa automat tranzactiile din extrasul PDF al bancii tale.',
+    importComingSoon: 'Functionalitate disponibila in curand...',
     catMap: baseMap // Aici trimitem masca
   } : {
     locale: 'en-US',
-    dashboard: 'Dashboard', insights: 'Insights', history: 'Full History', settings: 'Settings', simulator: 'Simulator', logout: 'Logout', menu: 'Menu',
+    dashboard: 'Dashboard', insights: 'Insights', history: 'Full History', settings: 'Settings', logout: 'Logout', menu: 'Menu', importExtras: 'Import Statement',
     latestTransactions: 'Latest Transactions',
     currentBalance: 'Current Balance', totalIncome: 'Total Income', totalExpense: 'Total Expenses',
     globalRate: 'Exchange Rate', otherCurrencies: 'Other currencies (in',
@@ -387,6 +390,9 @@ const t = computed(() => {
     validationCategory: 'Please select a category.',
     validationDate: 'Temporal error: Cannot add a transaction from the future!',
     
+    importTitle: 'Import Bank Statement',
+    importSubtitle: 'Automatically import transactions from your bank PDF statement.',
+    importComingSoon: 'Feature coming soon...',
     catMap: enMap // Aici trimitem masca în engleză
   }
 })
@@ -400,11 +406,9 @@ watch(user, (newUser, oldUser) => {
   if (!newUser) {
     budgets.value = []
     alertedBudgets.value.clear()
-    sessionStorage.removeItem('alerted_budgets')
   } else if (oldUser && newUser.uid !== oldUser.uid) {
     budgets.value = []
     alertedBudgets.value.clear()
-    sessionStorage.removeItem('alerted_budgets')
     loadBudgets()
   } else if (!oldUser && newUser) {
     loadBudgets()
@@ -481,6 +485,9 @@ const loadBudgets = () => {
       budgets.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
     })
   }
+  // Reset alertele la schimbul de user
+  alertedBudgets.value = new Set()
+  lastAlertMonth.value = new Date().getMonth()
 }
 
 const handleSaveBudget = async (budget) => {
@@ -515,7 +522,6 @@ const handleSaveBudget = async (budget) => {
     }
     // Reset alertele când se salvează buget nou
     alertedBudgets.value.clear()
-    sessionStorage.removeItem('alerted_budgets')
     addToast(
       currentLang.value === 'ro' ? '✅ Buget salvat cu succes!' : '✅ Budget saved successfully!',
       'success'
@@ -803,7 +809,6 @@ const spentByCategory = computed(() => {
   if (currentMonth !== lastAlertMonth.value) {
     // S-a schimbat luna → resetează alertele
     alertedBudgets.value.clear()
-    sessionStorage.removeItem('alerted_budgets')
     lastAlertMonth.value = currentMonth
   }
   
@@ -816,7 +821,6 @@ const spentByCategory = computed(() => {
       const alertKey = `100_${budget.category}`
       if (!alertedBudgets.value.has(alertKey)) {
         alertedBudgets.value.add(alertKey)
-        sessionStorage.setItem('alerted_budgets', JSON.stringify([...alertedBudgets.value]))
         const catName = t.value.catMap[budget.category] || budget.category
         const msg = currentLang.value === 'ro'
           ? `❌ Buget depășit! Ați cheltuit 100%+ din bugetul pentru ${catName}`
@@ -828,7 +832,6 @@ const spentByCategory = computed(() => {
       const alertKey = `80_${budget.category}`
       if (!alertedBudgets.value.has(alertKey)) {
         alertedBudgets.value.add(alertKey)
-        sessionStorage.setItem('alerted_budgets', JSON.stringify([...alertedBudgets.value]))
         const catName = t.value.catMap[budget.category] || budget.category
         const msg = currentLang.value === 'ro'
           ? `⚠️ Atenție! Ați cheltuit ${percent.toFixed(0)}% din bugetul pentru ${catName}`
@@ -1347,6 +1350,7 @@ body.dark-mode .google-btn:hover { background: #34495e; }
 .list-header {
   display: flex;
   justify-content: space-between;
+  
   align-items: center;
   margin-bottom: 15px;
 }
