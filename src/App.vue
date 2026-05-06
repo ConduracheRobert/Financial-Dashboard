@@ -985,6 +985,7 @@ provide('selectedCategory', selectedCategory)
 provide('setSelectedCategory', v => { selectedCategory.value = v })
 
 provide('handleDeleteTransaction', handleDeleteTransaction)
+provide('handleSaveTransaction', handleSaveTransaction)
 provide('openEditModal', openEditModal)
 provide('handleDeleteRecurring', handleDeleteRecurring)
 provide('openEditRecurring', openEditRecurring)

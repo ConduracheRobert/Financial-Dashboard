@@ -213,14 +213,17 @@ async function extractLines(file) {
   return all
 }
 
-// "1.234,56" -> 1234.56  (also handles "1234.56" for Revolut)
+// "1.234,56" -> 1234.56  (Romanian: dot=thousands, comma=decimal)
 function roNum(s) {
   const clean = (s || '').trim()
-  // Romanian format: dot=thousands, comma=decimal
   if (/\d\.\d{3},\d/.test(clean)) return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0
-  // Comma as decimal without thousands dot
-  if (/\d,\d{2}$/.test(clean)) return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0
+  if (/\d,\d{2}$/.test(clean))    return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0
   return parseFloat(clean.replace(',', '.')) || 0
+}
+
+// "14.60" or "1,430.54" -> number  (English/BT: comma=thousands, dot=decimal)
+function enNum(s) {
+  return parseFloat((s || '').replace(/,/g, '')) || 0
 }
 
 function toIso(dd, mm, yyyy) {
@@ -247,30 +250,57 @@ function isIncome(desc) {
 }
 
 // ── BT (Banca Transilvania) ──
-// Rows: DD.MM.YYYY  <desc>  <amount>  [D|C]  <balance>
+// Date: DD/MM/YYYY | Amounts: English format (14.60 / 1,430.54)
+// Columns: Data | Descriere | Debit | Credit | Sold
+// pdf.js omite coloana goala, deci pe fiecare rand apare 1-2 sume la final
 function parseBT(lines) {
   const txs = []
-  // With D/C marker
-  const redc = /^(\d{2})\.(\d{2})\.(\d{4})\s+(.+?)\s+([\d.]+,\d{2})\s*(?:RON\s*)?([DC])\s+[\d.]+,\d{2}/
-  // Without D/C: two amounts at end (amount + balance)
-  const re2  = /^(\d{2})\.(\d{2})\.(\d{4})\s+(.+?)\s+([\d.]+,\d{2})\s+[\d.]+,\d{2}\s*(?:RON)?\s*$/
+  const dateRe = /^(\d{2})\/(\d{2})\/(\d{4})\s+(.*)/
 
-  for (const line of lines) {
-    let m = line.match(redc)
-    if (m) {
-      const [, dd, mm, yyyy, desc, amtStr, dc] = m
-      const abs = roNum(amtStr)
-      const amount = dc === 'C' ? abs : -abs
-      txs.push({ date: toIso(dd, mm, yyyy), description: desc.trim(), amount, selected: true, category: autoCategory(desc) })
-      continue
+  // Sari peste header: cauta primul rand cu data sau keyword de sectiune
+  let start = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (/SOLD ANTERIOR|EXTRAS DE CONT|EXTRASE DE CONT/i.test(lines[i])) { start = i + 1; break }
+    if (dateRe.test(lines[i])) { start = i; break }
+  }
+
+  // Pattern pentru sume in format englezesc la finalul randului
+  const t3 = /([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/  // debit + credit + sold
+  const t2 = /([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/                     // suma + sold
+  const t1 = /([\d,]+\.\d{2})\s*$/                                        // suma singura
+
+  for (let i = start; i < lines.length; i++) {
+    const m = lines[i].match(dateRe)
+    if (!m) continue
+
+    const [, dd, mm, yyyy, rest] = m
+    const date = toIso(dd, mm, yyyy)
+
+    let abs = 0, desc = rest.trim()
+
+    const m3 = rest.match(t3)
+    if (m3) {
+      // debit si credit ambele vizibile: ia primul non-zero
+      const a = enNum(m3[1]), b = enNum(m3[2])
+      abs = a > 0 ? a : b
+      desc = rest.substring(0, m3.index).trim()
+    } else {
+      const m2 = rest.match(t2)
+      if (m2) {
+        abs = enNum(m2[1])
+        desc = rest.substring(0, m2.index).trim()
+      } else {
+        const m1 = rest.match(t1)
+        if (m1) {
+          abs = enNum(m1[1])
+          desc = rest.substring(0, m1.index).trim()
+        }
+      }
     }
-    m = line.match(re2)
-    if (m) {
-      const [, dd, mm, yyyy, desc, amtStr] = m
-      const abs = roNum(amtStr)
-      const amount = isIncome(desc) ? abs : -abs
-      txs.push({ date: toIso(dd, mm, yyyy), description: desc.trim(), amount, selected: true, category: autoCategory(desc) })
-    }
+
+    if (abs === 0) continue
+    const amount = isIncome(desc) ? abs : -abs
+    txs.push({ date, description: desc, amount, selected: true, category: autoCategory(desc) })
   }
   return txs
 }
