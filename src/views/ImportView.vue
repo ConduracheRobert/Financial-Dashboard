@@ -182,6 +182,187 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
 import { RouterLink } from 'vue-router'
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
+
+// ──────────── PDF ENGINE ────────────
+
+async function extractLines(file) {
+  const buf = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise
+  const all = []
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p)
+    const { items } = await page.getTextContent()
+    const byY = new Map()
+    for (const it of items) {
+      if (!it.str?.trim()) continue
+      // quantize Y to 3pt buckets to merge near-identical rows
+      const y = Math.round(it.transform[5] / 3) * 3
+      if (!byY.has(y)) byY.set(y, [])
+      byY.get(y).push({ x: it.transform[4], s: it.str })
+    }
+    ;[...byY.entries()]
+      .sort((a, b) => b[0] - a[0]) // Y desc = top to bottom
+      .forEach(([, xs]) => {
+        const line = xs.sort((a, b) => a.x - b.x).map(i => i.s).join(' ').replace(/\s+/g, ' ').trim()
+        if (line.length > 1) all.push(line)
+      })
+  }
+  return all
+}
+
+// "1.234,56" -> 1234.56  (also handles "1234.56" for Revolut)
+function roNum(s) {
+  const clean = (s || '').trim()
+  // Romanian format: dot=thousands, comma=decimal
+  if (/\d\.\d{3},\d/.test(clean)) return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0
+  // Comma as decimal without thousands dot
+  if (/\d,\d{2}$/.test(clean)) return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0
+  return parseFloat(clean.replace(',', '.')) || 0
+}
+
+function toIso(dd, mm, yyyy) {
+  return `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`
+}
+
+function autoCategory(desc) {
+  const d = (desc || '').toLowerCase()
+  if (/kaufland|mega.?image|lidl|penny|profi|auchan|carrefour|restaurant|mcdonald|kfc|pizza|burger|sushi|cofetari|patiseri|supermarket|bilka|selgros|market/i.test(d)) return 'Mâncare'
+  if (/uber|bolt|taxi|stb|ratb|metrou|cfr|ryanair|wizz|tarom|petrom|omv|lukoil|rompetrol|benzin|combustibil|autobuz|tramvai|parking|parcare/i.test(d)) return 'Transport'
+  if (/electrica|enel|eon|digi|rcs|orange|vodafone|telekom|netflix|spotify|steam|factura|utilit|apa nova|canal|gaze?\b|curent/i.test(d)) return 'Facturi & Utilități'
+  if (/emag|altex|flanco|ikea|dedeman|leroy|bricostore|h&m|\bhm\b|zara|reserved|bershka|fashion|shop|store/i.test(d)) return 'Cumpărături'
+  if (/cinema|bilet|concert|teatru|\bclub\b|\bbar\b|\bpub\b|gym|sport|fitness|hbo|disney/i.test(d)) return 'Divertisment'
+  if (/farmacie|sensiblu|catena|dr.?max|medic|clinica|spital|dentist|stomatolog/i.test(d)) return 'Sănătate'
+  if (/librarie|curs\b|scoala|facultate|student|taxa.?scolara/i.test(d)) return 'Educație'
+  if (/chirie|ipoteca|imobil|proprietar|intretinere|asociatie/i.test(d)) return 'Casă'
+  if (/salariu|salary|virament.?sal|bonus.+primit|venit/i.test(d)) return 'Salariu'
+  return 'Altele'
+}
+
+// Keyword-based income detection (fallback when no D/C column)
+function isIncome(desc) {
+  return /incasare|credit\b|transfer primit|depunere|salariu|bonus|rambursare|restituire|castig|dividend|venit/i.test(desc || '')
+}
+
+// ── BT (Banca Transilvania) ──
+// Rows: DD.MM.YYYY  <desc>  <amount>  [D|C]  <balance>
+function parseBT(lines) {
+  const txs = []
+  // With D/C marker
+  const redc = /^(\d{2})\.(\d{2})\.(\d{4})\s+(.+?)\s+([\d.]+,\d{2})\s*(?:RON\s*)?([DC])\s+[\d.]+,\d{2}/
+  // Without D/C: two amounts at end (amount + balance)
+  const re2  = /^(\d{2})\.(\d{2})\.(\d{4})\s+(.+?)\s+([\d.]+,\d{2})\s+[\d.]+,\d{2}\s*(?:RON)?\s*$/
+
+  for (const line of lines) {
+    let m = line.match(redc)
+    if (m) {
+      const [, dd, mm, yyyy, desc, amtStr, dc] = m
+      const abs = roNum(amtStr)
+      const amount = dc === 'C' ? abs : -abs
+      txs.push({ date: toIso(dd, mm, yyyy), description: desc.trim(), amount, selected: true, category: autoCategory(desc) })
+      continue
+    }
+    m = line.match(re2)
+    if (m) {
+      const [, dd, mm, yyyy, desc, amtStr] = m
+      const abs = roNum(amtStr)
+      const amount = isIncome(desc) ? abs : -abs
+      txs.push({ date: toIso(dd, mm, yyyy), description: desc.trim(), amount, selected: true, category: autoCategory(desc) })
+    }
+  }
+  return txs
+}
+
+// ── BCR ──
+// Rows: DD.MM.YYYY  <desc>  <debit>  <credit>  <balance>  (one of debit/credit is "-")
+// Fallback: DD.MM.YYYY  <desc>  <amount> RON  <balance> RON
+function parseBCR(lines) {
+  const txs = []
+  // Two amounts with optional dashes (debit/credit columns)
+  const redc = /^(\d{2})[./](\d{2})[./](\d{4})\s+(.+?)\s+([\d.]+,\d{2}|-)\s+([\d.]+,\d{2}|-)\s+[\d.]+,\d{2}/
+  // Single amount + balance
+  const re2  = /^(\d{2})[./](\d{2})[./](\d{4})\s+(.+?)\s+([\d.]+,\d{2})\s+[\d.]+,\d{2}\s*(?:RON)?\s*$/
+
+  for (const line of lines) {
+    let m = line.match(redc)
+    if (m) {
+      const [, dd, mm, yyyy, desc, debStr, creStr] = m
+      const debit  = debStr === '-' ? 0 : roNum(debStr)
+      const credit = creStr === '-' ? 0 : roNum(creStr)
+      if (debit === 0 && credit === 0) continue
+      const amount = credit > 0 ? credit : -debit
+      txs.push({ date: toIso(dd, mm, yyyy), description: desc.trim(), amount, selected: true, category: autoCategory(desc) })
+      continue
+    }
+    m = line.match(re2)
+    if (m) {
+      const [, dd, mm, yyyy, desc, amtStr] = m
+      const abs = roNum(amtStr)
+      const amount = isIncome(desc) ? abs : -abs
+      txs.push({ date: toIso(dd, mm, yyyy), description: desc.trim(), amount, selected: true, category: autoCategory(desc) })
+    }
+  }
+  return txs
+}
+
+// ── Revolut ──
+// New (2023+): "15 Jan 2024  Merchant  Completed  RON  -9.99  RON  140.23"
+// Old:         "Jan 15, 2024  Merchant  -9,99 RON  140,23 RON"
+// ISO:         "2024-01-15  Merchant  -9.99"
+function parseRevolut(lines) {
+  const txs = []
+  const MON = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 }
+
+  // "15 Jan 2024  desc  ... signed-amount  balance"
+  const re1 = /^(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s+[\d.,]+\s*[A-Z]{0,3}\s*$/i
+  // "Jan 15, 2024  desc  signed-amount"
+  const re2 = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s*$/i
+  // ISO date "2024-01-15  desc  signed-amount"
+  const re3 = /^(\d{4})-(\d{2})-(\d{2})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s*$/
+
+  const skip = /^(date|data|description|descri|amount|balance|completed|pending|declined|type|currency)/i
+
+  for (const line of lines) {
+    if (skip.test(line)) continue
+
+    let date, desc, rawAmt
+
+    let m = line.match(re1)
+    if (m) {
+      const [, d, mon, y, description, amt] = m
+      const mm = String(MON[mon.slice(0,3).toLowerCase()] || 1).padStart(2,'0')
+      date = `${y}-${mm}-${d.padStart(2,'0')}`
+      desc = description; rawAmt = amt
+    }
+    if (!date) {
+      m = line.match(re2)
+      if (m) {
+        const [, mon, d, y, description, amt] = m
+        const mm = String(MON[mon.slice(0,3).toLowerCase()] || 1).padStart(2,'0')
+        date = `${y}-${mm}-${d.padStart(2,'0')}`
+        desc = description; rawAmt = amt
+      }
+    }
+    if (!date) {
+      m = line.match(re3)
+      if (m) {
+        const [, y, mm, dd, description, amt] = m
+        date = `${y}-${mm}-${dd}`
+        desc = description; rawAmt = amt
+      }
+    }
+    if (!date || !rawAmt) continue
+
+    // Revolut uses period as decimal (or comma in some locales)
+    const amount = parseFloat((rawAmt || '').replace(',', '.')) || 0
+    if (amount === 0) continue
+
+    txs.push({ date, description: (desc || '').trim(), amount, selected: true, category: autoCategory(desc) })
+  }
+  return txs
+}
 
 const t = inject('t')
 const customCategories = inject('customCategories')
@@ -252,19 +433,30 @@ const removeFile = () => {
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
-// Procesare PDF (parserii reali vin in Pasul 3)
 const processFile = async () => {
   if (!selectedFile.value || !selectedBank.value) return
   errorMsg.value = ''
   isProcessing.value = true
 
   try {
-    // Pasul 3 va inlocui aceasta functie cu parseri reali
-    await new Promise(r => setTimeout(r, 1200))
+    const lines = await extractLines(selectedFile.value)
 
-    previewTransactions.value = []
+    let txs = []
+    if      (selectedBank.value === 'bt')      txs = parseBT(lines)
+    else if (selectedBank.value === 'bcr')     txs = parseBCR(lines)
+    else if (selectedBank.value === 'revolut') txs = parseRevolut(lines)
+
+    if (txs.length === 0) {
+      errorMsg.value = t.value.importNoTransactions
+      return
+    }
+
+    // Sort newest first
+    txs.sort((a, b) => b.date.localeCompare(a.date))
+    previewTransactions.value = txs
     currentStep.value = 2
   } catch (err) {
+    console.error('[ImportView] processFile:', err)
     errorMsg.value = 'Eroare la procesarea PDF-ului. Incearca din nou.'
   } finally {
     isProcessing.value = false

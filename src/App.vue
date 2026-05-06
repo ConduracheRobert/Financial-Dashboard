@@ -380,6 +380,7 @@ const t = computed(() => {
     importSuccess: 'tranzactii importate cu succes!',
     importViewDashboard: 'Vezi in Dashboard',
     importAnother: 'Importa alt fisier',
+    importNoTransactions: 'Nu au fost detectate tranzactii. Verifica banca selectata sau formatul PDF-ului.',
     catMap: baseMap // Aici trimitem masca
   } : {
     locale: 'en-US',
@@ -429,6 +430,7 @@ const t = computed(() => {
     importSuccess: 'transactions imported successfully!',
     importViewDashboard: 'View Dashboard',
     importAnother: 'Import another file',
+    importNoTransactions: 'No transactions detected. Check the selected bank or PDF format.',
     catMap: enMap // Aici trimitem masca în engleză
   }
 })
