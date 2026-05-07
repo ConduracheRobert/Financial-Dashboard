@@ -1,320 +1,186 @@
 import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).href
-
-// ── Constante ────────────────────────────────────────────────────────────────
-
-const SKIP_BT = /SOLD ANTERIOR|SOLD FINAL ZI|RULAJ ZI|SOLD FINAL CONT|RULAJ TOTAL CONT|SUME BLOCATE/i
-const SKIP_BCR = /Final transactions|Final amount balance|Initial amount balance|Total transactions/i
-
-const MONTH_MAP = {
-  Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-  Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
-}
-
-// ── Detectie categorie ────────────────────────────────────────────────────────
-
-function detectCatBT(desc) {
-  const u = desc.toUpperCase()
-  if (/CANTINA|RESTAURANT|SUPERMARKET|ALIMENTAR|KAUFLAND|LIDL|PENNY/.test(u)) return 'Mâncare'
-  if (/VODAFONE|TELEKOM|ORANGE|DIGI|UTILIT/.test(u)) return 'Facturi & Utilități'
-  if (/\bPOS\b/.test(u)) return 'Cumpărături'
-  if (/P2P|TRANSFER|BTPAY/.test(u)) return 'Altele'
-  return 'Altele'
-}
-
-function detectCatBCR(desc) {
-  const u = desc.toUpperCase()
-  if (/CANTINA|RESTAURANT|SUPERMARKET|ALIMENTAR|KAUFLAND|LIDL|PENNY/.test(u)) return 'Mâncare'
-  if (/VODAFONE|TELEKOM|ORANGE|DIGI|UTILIT/.test(u)) return 'Facturi & Utilități'
-  if (/\bPOS\b/.test(u)) return 'Cumpărături'
-  if (/P2P|TRANSFER/.test(u)) return 'Altele'
-  return 'Altele'
-}
-
-function detectCatRevolut(desc) {
-  const l = desc.toLowerCase()
-  if (/vodafone|orange|telekom|digi/.test(l)) return 'Facturi & Utilități'
-  if (/emag|kaufland|lidl/.test(l)) return 'Cumpărături'
-  if (/transfer|payment from|payment to/.test(l)) return 'Altele'
-  return 'Altele'
-}
-
-// ── Parsare sume ──────────────────────────────────────────────────────────────
-
-// Format romanesc: "1.234,56" sau "42,50"
-function parseRoAmount(str) {
-  if (!str) return null
-  let s = str.trim().replace(/\s/g, '')
-  if (!/^\d/.test(s)) return null
-  if (s.includes(',')) {
-    // virgula = separator zecimal; punctele inainte de grupuri de 3 cifre = mii
-    s = s.replace(/\.(?=\d{3}(?:,|$))/g, '').replace(',', '.')
-  }
-  const n = parseFloat(s)
-  return isNaN(n) || n < 0 ? null : n
-}
-
-// Format englezesc: "1,234.56" sau "49.99"
-function parseEnAmount(str) {
-  if (!str) return null
-  let s = str.trim().replace(/\s/g, '')
-  if (!/^\d/.test(s)) return null
-  s = s.replace(/,(?=\d{3})/g, '')
-  const n = parseFloat(s)
-  return isNaN(n) || n < 0 ? null : n
-}
-
-// ── Extragere text PDF ────────────────────────────────────────────────────────
-
-async function extractPDFItems(file) {
+// Extrage textul PDF in linii ordonate de sus in jos
+async function getLines(file) {
   const buf = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise
-  const allItems = []
-
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise
+  const all = []
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p)
-    const tc = await page.getTextContent()
-    for (const item of tc.items) {
-      const s = item.str.trim()
-      if (s) {
-        allItems.push({ str: s, x: item.transform[4], y: item.transform[5] })
-      }
+    const { items } = await page.getTextContent()
+    const byY = new Map()
+    for (const it of items) {
+      if (!it.str?.trim()) continue
+      const y = Math.round(it.transform[5] / 3) * 3
+      if (!byY.has(y)) byY.set(y, [])
+      byY.get(y).push({ x: it.transform[4], s: it.str })
     }
+    ;[...byY.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .forEach(([, xs]) => {
+        const line = xs.sort((a, b) => a.x - b.x).map(i => i.s).join(' ').replace(/\s+/g, ' ').trim()
+        if (line.length > 1) all.push(line)
+      })
   }
-  return allItems
+  return all
 }
 
-// Grupeaza itemele in linii vizuale dupa coordonata Y
-function itemsToLines(items, tol = 4) {
-  const map = new Map()
-  for (const item of items) {
-    let key = null
-    for (const [k] of map) {
-      if (Math.abs(k - item.y) <= tol) { key = k; break }
-    }
-    if (key === null) { key = item.y; map.set(key, []) }
-    map.get(key).push(item)
-  }
-  return [...map.entries()]
-    .sort(([a], [b]) => b - a)
-    .map(([y, its]) => ({
-      y,
-      items: its.sort((a, b) => a.x - b.x),
-      text: its.sort((a, b) => a.x - b.x).map(i => i.str).join(' ').trim()
-    }))
+// Format englezesc: "1,430.54" sau "70.00"
+function enNum(s) {
+  return parseFloat((s || '').replace(/,/g, '')) || 0
 }
 
-// Gaseste coloanele Debit/Credit din linia de header
-function findDebitCreditColumns(lines, items) {
-  let debitX = null, creditX = null
-  for (const line of lines) {
-    const lower = line.text.toLowerCase()
-    if (lower.includes('debit') && lower.includes('credit')) {
-      for (const it of line.items) {
-        const t = it.str.toLowerCase()
-        if (t === 'debit') debitX = it.x
-        if (t === 'credit') creditX = it.x
-      }
-      if (debitX && creditX) break
-    }
-  }
-  // Fallback pe baza latimii paginii
-  const maxX = Math.max(...items.map(i => i.x), 500)
-  return {
-    debitX: debitX ?? maxX * 0.62,
-    creditX: creditX ?? maxX * 0.80
-  }
+// Format romanesc: "1.234,56" sau "42,50"
+function roNum(s) {
+  const c = (s || '').trim()
+  if (/\d\.\d{3},/.test(c)) return parseFloat(c.replace(/\./g, '').replace(',', '.')) || 0
+  if (/\d,\d{2}$/.test(c))  return parseFloat(c.replace(',', '.')) || 0
+  return parseFloat(c) || 0
 }
 
-// Extrage sumele dintr-o linie in functie de pozitia coloanelor
-function extractAmounts(lineItems, debitX, creditX) {
-  let debit = null, credit = null
-  for (const ai of lineItems) {
-    if (ai.x < debitX - 5) continue
-    const v = parseRoAmount(ai.str)
-    if (v === null) continue
-    if (ai.x >= creditX - 5) credit = v
-    else debit = v
-  }
-  return { debit, credit }
+function toIso(dd, mm, yyyy) {
+  return `${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`
 }
 
 // ── PARSER BT (Banca Transilvania) ───────────────────────────────────────────
-// Format data: DD/MM/YYYY
-// Coloane: Data | Descriere | Debit | Credit
+// Importa DOAR sumele zilnice totale din randurile "RULAJ ZI"
+// Format rand: "DD/MM/YYYY RULAJ ZI <debit> <credit>"
+// Exemplu:    "02/03/2026 RULAJ ZI 70.00 250.00"
 
 export async function parseBT(file) {
-  const items = await extractPDFItems(file)
-  const lines = itemsToLines(items)
-  const { debitX, creditX } = findDebitCreditColumns(lines, items)
-
+  const lines = await getLines(file)
   const txs = []
-  let cur = null
-  const DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/
+
+  // Sume BT sunt in format englezesc (punct ca separator zecimal)
+  const re = /^(\d{2})\/(\d{2})\/(\d{4})\s+RULAJ\s+ZI\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})/i
 
   for (const line of lines) {
-    if (!line.items.length) continue
-    if (SKIP_BT.test(line.text)) continue
+    if (/RULAJ\s+TOTAL\s+CONT/i.test(line)) continue
 
-    const first = line.items[0]
-    const dm = first.str.match(DATE_RE)
+    const m = line.match(re)
+    if (!m) continue
 
-    if (dm) {
-      if (cur) txs.push(buildTx(cur, detectCatBT))
+    const [, dd, mm, yyyy, debitStr, creditStr] = m
+    const date  = toIso(dd, mm, yyyy)
+    const label = `${dd}/${mm}/${yyyy}`
+    const debit  = enNum(debitStr)
+    const credit = enNum(creditStr)
 
-      const [, dd, mm, yyyy] = dm
-      const descItems = line.items.slice(1).filter(i => i.x < debitX - 5)
-      const { debit, credit } = extractAmounts(line.items, debitX, creditX)
-
-      cur = {
-        date: `${yyyy}-${mm}-${dd}`,
-        description: descItems.map(i => i.str).join(' ').trim(),
-        debit,
-        credit
-      }
-    } else if (cur && cur.debit === null && cur.credit === null) {
-      // Linie de continuare: cauta sume daca tranzactia nu le are inca
-      const { debit, credit } = extractAmounts(line.items, debitX, creditX)
-      if (debit !== null || credit !== null) {
-        cur.debit = debit
-        cur.credit = credit
-      }
-    }
+    if (debit > 0) txs.push({
+      date, description: `Cheltuieli BT - ${label}`,
+      amount: -debit, category: 'Extras Cont', selected: true
+    })
+    if (credit > 0) txs.push({
+      date, description: `Venituri BT - ${label}`,
+      amount: credit, category: 'Altele', selected: true
+    })
   }
-  if (cur) txs.push(buildTx(cur, detectCatBT))
-
-  return txs.filter(t => t.amount !== null && t.amount !== 0)
+  return txs
 }
 
 // ── PARSER BCR (Romanian Commercial Bank) ────────────────────────────────────
-// Format data: MM/DD/YYYY (format american)
-// Coloane: Operation Date | Explanation | Debit | Credit
+// Importa sumele zilnice din randurile "Final transactions: <debit> <credit>"
+// Data se ia din cel mai recent header "Date: MM/DD/YYYY" de deasupra
+// Ultima aparitie "Final transactions:" = totalul general → ignorata
 
 export async function parseBCR(file) {
-  const items = await extractPDFItems(file)
-  const lines = itemsToLines(items)
-  const { debitX, creditX } = findDebitCreditColumns(lines, items)
-
+  const lines = await getLines(file)
   const txs = []
-  let cur = null
-  const DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/
+
+  const dateRe  = /Date:\s*(\d{2})\/(\d{2})\/(\d{4})/i
+  const finalRe = /Final\s+transactions:\s*([\d.,]+)\s+([\d.,]+)/i
+
+  const totalFinal = lines.filter(l => finalRe.test(l)).length
+  let seenFinal = 0
+  let currentDate = null
 
   for (const line of lines) {
-    if (!line.items.length) continue
-    if (SKIP_BCR.test(line.text)) continue
-
-    const first = line.items[0]
-    const dm = first.str.match(DATE_RE)
-
+    const dm = line.match(dateRe)
     if (dm) {
-      if (cur) txs.push(buildTx(cur, detectCatBCR))
-
-      const [, mm, dd, yyyy] = dm // BCR: MM/DD/YYYY
-      const descItems = line.items.slice(1).filter(i => i.x < debitX - 5)
-      const { debit, credit } = extractAmounts(line.items, debitX, creditX)
-
-      cur = {
-        date: `${yyyy}-${mm}-${dd}`,
-        description: descItems.map(i => i.str).join(' ').trim(),
-        debit,
-        credit
-      }
-    } else if (cur && cur.debit === null && cur.credit === null) {
-      const { debit, credit } = extractAmounts(line.items, debitX, creditX)
-      if (debit !== null || credit !== null) {
-        cur.debit = debit
-        cur.credit = credit
-      }
+      const [, mm, dd, yyyy] = dm
+      currentDate = toIso(dd, mm, yyyy)
+      continue
     }
-  }
-  if (cur) txs.push(buildTx(cur, detectCatBCR))
 
-  return txs.filter(t => t.amount !== null && t.amount !== 0)
+    const fm = line.match(finalRe)
+    if (!fm) continue
+
+    seenFinal++
+    if (seenFinal === totalFinal) continue // total general - skip
+    if (!currentDate) continue
+
+    const debit  = roNum(fm[1])
+    const credit = roNum(fm[2])
+    const [y, mo, d] = currentDate.split('-')
+    const label = `${d}/${mo}/${y}`
+
+    if (debit > 0) txs.push({
+      date: currentDate, description: `Cheltuieli BCR - ${label}`,
+      amount: -debit, category: 'Extras Cont', selected: true
+    })
+    if (credit > 0) txs.push({
+      date: currentDate, description: `Venituri BCR - ${label}`,
+      amount: credit, category: 'Altele', selected: true
+    })
+  }
+  return txs
 }
 
 // ── PARSER REVOLUT ────────────────────────────────────────────────────────────
-// Format data: "Apr 2, 2026"
-// Coloane: Date | Description | Money out | Money in | Balance
-
-function parseRevolutDate(str) {
-  const m = str.match(/^([A-Z][a-z]{2})\s+(\d{1,2}),?\s*(\d{4})$/)
-  if (!m) return null
-  const mm = MONTH_MAP[m[1]]
-  return mm ? `${m[3]}-${mm}-${m[2].padStart(2, '0')}` : null
-}
+// Tranzactii individuale, 3 formate de data suportate
+// Money out (negativ) → categoria "Extras Cont"
+// Money in  (pozitiv) → categoria "Altele"
 
 export async function parseRevolut(file) {
-  const items = await extractPDFItems(file)
-  const lines = itemsToLines(items)
-
-  // Detecteaza coloanele Money out / Money in din header
-  let outX = null, inX = null
-  for (const line of lines) {
-    const lt = line.text.toLowerCase()
-    if (lt.includes('money out') || (lt.includes('out') && lt.includes('in'))) {
-      for (const it of line.items) {
-        const t = it.str.toLowerCase()
-        if (t === 'out' || t === 'money out') outX = it.x
-        if (t === 'in'  || t === 'money in')  inX  = it.x
-      }
-      if (outX && inX) break
-    }
-  }
-
-  const maxX = Math.max(...items.map(i => i.x), 500)
-  if (!outX) outX = maxX * 0.55
-  if (!inX)  inX  = maxX * 0.70
-
+  const lines = await getLines(file)
   const txs = []
+  const MON = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 }
+
+  // "15 Jan 2024  desc  signed-amount  balance"
+  const re1 = /^(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s+[\d.,]+/i
+  // "Jan 15, 2024  desc  signed-amount"
+  const re2 = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s*$/i
+  // ISO "2024-01-15  desc  signed-amount"
+  const re3 = /^(\d{4})-(\d{2})-(\d{2})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s*$/
+  const skip = /^(date|description|amount|balance|completed|pending|declined|type|currency)/i
 
   for (const line of lines) {
-    if (!line.items.length) continue
+    if (skip.test(line)) continue
 
-    // Incearca sa detecteze data din primele 1-3 iteme
-    let date = null
-    let descStart = 0
-    for (let n = 3; n >= 1; n--) {
-      const candidate = line.items.slice(0, n).map(i => i.str).join(' ')
-      date = parseRevolutDate(candidate)
-      if (date) { descStart = n; break }
+    let date, desc, rawAmt
+
+    let m = line.match(re1)
+    if (m) {
+      const mm = String(MON[m[2].slice(0,3).toLowerCase()] || 1).padStart(2,'0')
+      date = `${m[3]}-${mm}-${m[1].padStart(2,'0')}`
+      desc = m[4]; rawAmt = m[5]
     }
-    if (!date) continue
-
-    const descItems = line.items.slice(descStart).filter(i => i.x < outX - 5)
-    const description = descItems.map(i => i.str).join(' ').trim()
-
-    // Money out (cheltuiala) si Money in (venit)
-    let moneyOut = null, moneyIn = null
-    for (const ai of line.items) {
-      if (ai.x >= outX - 5 && ai.x < inX - 5) {
-        const v = parseEnAmount(ai.str)
-        if (v !== null && moneyOut === null) moneyOut = v
-      } else if (ai.x >= inX - 5) {
-        const v = parseEnAmount(ai.str)
-        if (v !== null && moneyIn === null) moneyIn = v
+    if (!date) {
+      m = line.match(re2)
+      if (m) {
+        const mm = String(MON[m[1].slice(0,3).toLowerCase()] || 1).padStart(2,'0')
+        date = `${m[3]}-${mm}-${m[2].padStart(2,'0')}`
+        desc = m[4]; rawAmt = m[5]
       }
     }
+    if (!date) {
+      m = line.match(re3)
+      if (m) { date = `${m[1]}-${m[2]}-${m[3]}`; desc = m[4]; rawAmt = m[5] }
+    }
+    if (!date || !rawAmt) continue
 
-    if (moneyOut === null && moneyIn === null) continue
+    const amount = parseFloat((rawAmt || '').replace(',', '.')) || 0
+    if (amount === 0) continue
 
-    const amount = moneyIn !== null ? moneyIn : -moneyOut
-    const desc = description || 'Transaction'
-    txs.push({ date, description: desc, amount, category: detectCatRevolut(desc), selected: true })
+    txs.push({
+      date,
+      description: (desc || '').trim(),
+      amount,
+      category: amount < 0 ? 'Extras Cont' : 'Altele',
+      selected: true
+    })
   }
-
-  return txs.filter(t => t.amount !== null && t.amount !== 0)
-}
-
-// ── Helper comun ──────────────────────────────────────────────────────────────
-
-function buildTx(cur, detectFn) {
-  const amount = cur.credit !== null
-    ? cur.credit
-    : cur.debit !== null ? -cur.debit : null
-  const desc = cur.description || 'Tranzactie'
-  return { date: cur.date, description: desc, amount, category: detectFn(desc), selected: true }
+  return txs
 }

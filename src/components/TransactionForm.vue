@@ -70,7 +70,7 @@ const category = ref('')
 const date = ref(todayString)
 const errorMessage = ref('')
 
-const BASE_EXPENSE_KEYS = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Altele']
+const BASE_EXPENSE_KEYS = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Extras Cont', 'Altele']
 const BASE_INCOME_KEYS  = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele']
 
 const customCategories = inject('customCategories', ref({ expense: [], income: [] }))

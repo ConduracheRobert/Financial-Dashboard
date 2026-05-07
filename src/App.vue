@@ -322,13 +322,15 @@ const t = computed(() => {
   const baseMap = {
     'Mâncare': 'Mâncare', 'Transport': 'Transport', 'Facturi & Utilități': 'Facturi & Utilități',
     'Cumpărături': 'Cumpărături', 'Divertisment': 'Divertisment', 'Sănătate': 'Sănătate',
-    'Educație': 'Educație', 'Casă': 'Casă', 'Salariu': 'Salariu', 'Bonus': 'Bonus',
+    'Educație': 'Educație', 'Casă': 'Casă', 'Extras Cont': 'Extras Cont',
+    'Salariu': 'Salariu', 'Bonus': 'Bonus',
     'Investiții': 'Investiții', 'Cadouri primite': 'Cadouri primite', 'Vânzări': 'Vânzări', 'Altele': 'Altele'
   }
   const enMap = {
     'Mâncare': 'Food', 'Transport': 'Transport', 'Facturi & Utilități': 'Bills & Utilities',
     'Cumpărături': 'Shopping', 'Divertisment': 'Entertainment', 'Sănătate': 'Health',
-    'Educație': 'Education', 'Casă': 'Home', 'Salariu': 'Salary', 'Bonus': 'Bonus',
+    'Educație': 'Education', 'Casă': 'Home', 'Extras Cont': 'Bank Statement',
+    'Salariu': 'Salary', 'Bonus': 'Bonus',
     'Investiții': 'Investments', 'Cadouri primite': 'Gifts Received', 'Vânzări': 'Sales', 'Altele': 'Others'
   }
 
