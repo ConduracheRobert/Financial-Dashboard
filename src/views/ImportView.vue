@@ -188,7 +188,7 @@ import { parseBT, parseBCR, parseRevolut } from '../utils/pdfParsers.js'
 
 const t = inject('t')
 const customCategories = inject('customCategories')
-const handleSaveTransaction = inject('handleSaveTransaction')
+const handleImportTransactions = inject('handleImportTransactions')
 
 // Categorii implicite
 const DEFAULT_EXPENSE = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Extras Cont', 'Altele']
@@ -288,23 +288,15 @@ const toggleSelectAll = () => {
   previewTransactions.value.forEach(tx => { tx.selected = newVal })
 }
 
-// Import (logica de salvare vine in Pasul 4)
 const doImport = async () => {
   isImporting.value = true
   const selected = previewTransactions.value.filter(tx => tx.selected)
-  let count = 0
 
-  for (const tx of selected) {
-    await handleSaveTransaction({
-      name: tx.description,
-      amount: tx.amount,
-      category: tx.category,
-      date: tx.date
-    })
-    count++
-  }
+  const { imported } = await handleImportTransactions(
+    selected.map(tx => ({ name: tx.description, amount: tx.amount, category: tx.category, date: tx.date }))
+  )
 
-  importedCount.value = count
+  importedCount.value = imported
   isImporting.value = false
   currentStep.value = 3
 }

@@ -508,6 +508,35 @@ const handleDeleteTransaction = async (id) => {
   )
 }
 
+const handleImportTransactions = async (txsToImport) => {
+  let imported = 0
+  let skipped = 0
+
+  for (const tx of txsToImport) {
+    const isDuplicate = transactions.value.some(
+      e => e.date === tx.date &&
+           Math.abs(e.amount - tx.amount) < 0.01 &&
+           e.name === tx.name
+    )
+    if (isDuplicate) { skipped++; continue }
+
+    await handleSaveTransaction({ name: tx.name, amount: tx.amount, category: tx.category, date: tx.date })
+    imported++
+  }
+
+  const ro = currentLang.value === 'ro'
+  addToast(
+    skipped > 0
+      ? (ro ? `✅ ${imported} tranzactii importate, ${skipped} duplicate sarite.`
+             : `✅ ${imported} transactions imported, ${skipped} duplicates skipped.`)
+      : (ro ? `✅ ${imported} tranzactii importate cu succes!`
+             : `✅ ${imported} transactions imported successfully!`),
+    'success'
+  )
+
+  return { imported, skipped }
+}
+
 const handleRates = (rates) => { globalRates.value = rates }
 
 // --- BUGETE: LOAD, SAVE, DELETE ---
@@ -988,6 +1017,7 @@ provide('setSelectedCategory', v => { selectedCategory.value = v })
 
 provide('handleDeleteTransaction', handleDeleteTransaction)
 provide('handleSaveTransaction', handleSaveTransaction)
+provide('handleImportTransactions', handleImportTransactions)
 provide('openEditModal', openEditModal)
 provide('handleDeleteRecurring', handleDeleteRecurring)
 provide('openEditRecurring', openEditRecurring)
