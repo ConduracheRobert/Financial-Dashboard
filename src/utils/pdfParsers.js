@@ -70,11 +70,11 @@ export async function parseBT(file) {
 
     if (debit > 0) txs.push({
       date, description: `Cheltuieli BT - ${label}`,
-      amount: -debit, category: 'Extras Cont', selected: true
+      amount: -debit, category: 'Extras Cont-Cheltuieli', selected: true
     })
     if (credit > 0) txs.push({
       date, description: `Venituri BT - ${label}`,
-      amount: credit, category: 'Altele', selected: true
+      amount: credit, category: 'Extras Cont-Venituri', selected: true
     })
   }
   return txs
@@ -118,11 +118,11 @@ export async function parseBCR(file) {
 
     if (debit > 0) txs.push({
       date: currentDate, description: `Cheltuieli BCR - ${label}`,
-      amount: -debit, category: 'Extras Cont', selected: true
+      amount: -debit, category: 'Extras Cont-Cheltuieli', selected: true
     })
     if (credit > 0) txs.push({
       date: currentDate, description: `Venituri BCR - ${label}`,
-      amount: credit, category: 'Altele', selected: true
+      amount: credit, category: 'Extras Cont-Venituri', selected: true
     })
   }
   return txs
