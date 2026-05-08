@@ -30,6 +30,7 @@
           <option value="">{{ t.importSelectBankPlaceholder }}</option>
           <option value="bt">Banca Transilvania (BT)</option>
           <option value="bcr">BCR</option>
+          <option value="brd">BRD - Groupe Société Générale</option>
           <option value="revolut">Revolut</option>
         </select>
       </div>
@@ -182,7 +183,7 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
 import { RouterLink } from 'vue-router'
-import { parseBT, parseBCR, parseRevolut } from '../utils/pdfParsers.js'
+import { parseBT, parseBCR, parseBRD, parseRevolut } from '../utils/pdfParsers.js'
 
 
 
@@ -264,6 +265,7 @@ const processFile = async () => {
     let txs = []
     if      (selectedBank.value === 'bt')      txs = await parseBT(selectedFile.value)
     else if (selectedBank.value === 'bcr')     txs = await parseBCR(selectedFile.value)
+    else if (selectedBank.value === 'brd')     txs = await parseBRD(selectedFile.value)
     else if (selectedBank.value === 'revolut') txs = await parseRevolut(selectedFile.value)
 
     if (txs.length === 0) {

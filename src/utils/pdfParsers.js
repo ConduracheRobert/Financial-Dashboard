@@ -128,58 +128,83 @@ export async function parseBCR(file) {
   return txs
 }
 
-// ── PARSER REVOLUT ────────────────────────────────────────────────────────────
-// Tranzactii individuale, 3 formate de data suportate
-// Money out (negativ) → categoria "Extras Cont"
-// Money in  (pozitiv) → categoria "Altele"
+// ── PARSER BRD (BRD - Groupe Société Générale) ───────────────────────────────
+// Sume zilnice din randurile "Total debit / Total credit <debit> <credit>"
+// Data din cel mai recent rand cu format DD/MM/YYYY
+// Sumele folosesc virgula ca separator zecimal (ex: "350,00")
 
-export async function parseRevolut(file) {
+export async function parseBRD(file) {
   const lines = await getLines(file)
   const txs = []
-  const MON = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 }
 
-  // "15 Jan 2024  desc  signed-amount  balance"
-  const re1 = /^(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s+[\d.,]+/i
-  // "Jan 15, 2024  desc  signed-amount"
-  const re2 = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s*$/i
-  // ISO "2024-01-15  desc  signed-amount"
-  const re3 = /^(\d{4})-(\d{2})-(\d{2})\s+(.+?)\s+([+-]?[\d.,]+)\s*[A-Z]{0,3}\s*$/
-  const skip = /^(date|description|amount|balance|completed|pending|declined|type|currency)/i
+  const dateRe  = /\b(\d{2})\/(\d{2})\/(\d{4})\b/
+  const totalRe = /Total\s+debit\s*\/\s*Total\s+credit\s+([\d.,]+)\s+([\d.,]+)/i
+  const skip    = /Sold\s+(initial|final)|Start\s+balance|End\s+balance/i
+
+  let currentDate = null
 
   for (const line of lines) {
     if (skip.test(line)) continue
 
-    let date, desc, rawAmt
+    const dm = line.match(dateRe)
+    if (dm) currentDate = toIso(dm[1], dm[2], dm[3])
 
-    let m = line.match(re1)
-    if (m) {
-      const mm = String(MON[m[2].slice(0,3).toLowerCase()] || 1).padStart(2,'0')
-      date = `${m[3]}-${mm}-${m[1].padStart(2,'0')}`
-      desc = m[4]; rawAmt = m[5]
-    }
-    if (!date) {
-      m = line.match(re2)
-      if (m) {
-        const mm = String(MON[m[1].slice(0,3).toLowerCase()] || 1).padStart(2,'0')
-        date = `${m[3]}-${mm}-${m[2].padStart(2,'0')}`
-        desc = m[4]; rawAmt = m[5]
-      }
-    }
-    if (!date) {
-      m = line.match(re3)
-      if (m) { date = `${m[1]}-${m[2]}-${m[3]}`; desc = m[4]; rawAmt = m[5] }
-    }
-    if (!date || !rawAmt) continue
+    const tm = line.match(totalRe)
+    if (!tm || !currentDate) continue
 
-    const amount = parseFloat((rawAmt || '').replace(',', '.')) || 0
-    if (amount === 0) continue
+    const debit  = roNum(tm[1])
+    const credit = roNum(tm[2])
+    const [y, mo, d] = currentDate.split('-')
+    const label = `${d}/${mo}/${y}`
 
-    txs.push({
-      date,
-      description: (desc || '').trim(),
-      amount,
-      category: amount < 0 ? 'Extras Cont' : 'Altele',
-      selected: true
+    if (debit > 0) txs.push({
+      date: currentDate, description: `Cheltuieli BRD - ${label}`,
+      amount: -debit, category: 'Extras Cont-Cheltuieli', selected: true
+    })
+    if (credit > 0) txs.push({
+      date: currentDate, description: `Venituri BRD - ${label}`,
+      amount: credit, category: 'Extras Cont-Venituri', selected: true
+    })
+  }
+  return txs
+}
+
+// ── PARSER REVOLUT ────────────────────────────────────────────────────────────
+// Tranzactii individuale, format data "Mar 21, 2026"
+// Coloane: money_out RON, money_in RON (cu 0.00 cand nu se aplica), balance RON
+// Money out > 0 → cheltuiala; Money in > 0 → venit
+
+export async function parseRevolut(file) {
+  const lines = await getLines(file)
+  const txs = []
+  const MON = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 }
+  const skip = /^(date|description|money\s*(out|in)|balance|statement|page|period|account|total)/i
+
+  for (const line of lines) {
+    if (skip.test(line)) continue
+
+    const dm = line.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})/i)
+    if (!dm) continue
+
+    const mm    = String(MON[dm[1].slice(0,3).toLowerCase()] || 1).padStart(2,'0')
+    const dd    = dm[2].padStart(2,'0')
+    const yyyy  = dm[3]
+    const date  = `${yyyy}-${mm}-${dd}`
+    const label = `${dd}/${mm}/${yyyy}`
+
+    const amounts = [...line.matchAll(/([\d.]+)\s+RON/gi)].map(m => parseFloat(m[1]) || 0)
+    if (amounts.length === 0) continue
+
+    const moneyOut = amounts[0] || 0
+    const moneyIn  = amounts.length >= 3 ? (amounts[1] || 0) : 0
+
+    if (moneyOut > 0) txs.push({
+      date, description: `Cheltuieli Revolut - ${label}`,
+      amount: -moneyOut, category: 'Extras Cont-Cheltuieli', selected: true
+    })
+    if (moneyIn > 0) txs.push({
+      date, description: `Venituri Revolut - ${label}`,
+      amount: moneyIn, category: 'Extras Cont-Venituri', selected: true
     })
   }
   return txs
