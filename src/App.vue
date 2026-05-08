@@ -322,16 +322,18 @@ const t = computed(() => {
   const baseMap = {
     'Mâncare': 'Mâncare', 'Transport': 'Transport', 'Facturi & Utilități': 'Facturi & Utilități',
     'Cumpărături': 'Cumpărături', 'Divertisment': 'Divertisment', 'Sănătate': 'Sănătate',
-    'Educație': 'Educație', 'Casă': 'Casă', 'Extras Cont': 'Extras Cont',
+    'Educație': 'Educație', 'Casă': 'Casă', 'Extras Cont-Cheltuieli': 'Extras Cont-Cheltuieli',
     'Salariu': 'Salariu', 'Bonus': 'Bonus',
-    'Investiții': 'Investiții', 'Cadouri primite': 'Cadouri primite', 'Vânzări': 'Vânzări', 'Altele': 'Altele'
+    'Investiții': 'Investiții', 'Cadouri primite': 'Cadouri primite', 'Vânzări': 'Vânzări', 'Altele': 'Altele',
+    'Extras Cont-Venituri': 'Extras Cont-Venituri'
   }
   const enMap = {
     'Mâncare': 'Food', 'Transport': 'Transport', 'Facturi & Utilități': 'Bills & Utilities',
     'Cumpărături': 'Shopping', 'Divertisment': 'Entertainment', 'Sănătate': 'Health',
-    'Educație': 'Education', 'Casă': 'Home', 'Extras Cont': 'Bank Statement',
+    'Educație': 'Education', 'Casă': 'Home', 'Extras Cont-Cheltuieli': 'Bank Statement (Expenses)',
     'Salariu': 'Salary', 'Bonus': 'Bonus',
-    'Investiții': 'Investments', 'Cadouri primite': 'Gifts Received', 'Vânzări': 'Sales', 'Altele': 'Others'
+    'Investiții': 'Investments', 'Cadouri primite': 'Gifts Received', 'Vânzări': 'Sales', 'Altele': 'Others',
+    'Extras Cont-Venituri': 'Bank Statement (Income)'
   }
 
   return currentLang.value === 'ro' ? {

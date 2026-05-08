@@ -80,7 +80,7 @@ const emit = defineEmits(['save-budget', 'delete-budget'])
 
 const BASE_EXPENSE_KEYS = [
   'Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături',
-  'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Extras Cont', 'Altele'
+  'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Extras Cont-Cheltuieli', 'Altele'
 ]
 const customCategories = inject('customCategories', ref({ expense: [], income: [] }))
 const ALL_EXPENSE_KEYS = computed(() => [...BASE_EXPENSE_KEYS, ...customCategories.value.expense])

@@ -191,8 +191,8 @@ const customCategories = inject('customCategories')
 const handleImportTransactions = inject('handleImportTransactions')
 
 // Categorii implicite
-const DEFAULT_EXPENSE = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Extras Cont', 'Altele']
-const DEFAULT_INCOME  = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele']
+const DEFAULT_EXPENSE = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Extras Cont-Cheltuieli', 'Altele']
+const DEFAULT_INCOME  = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele', 'Extras Cont-Venituri']
 
 const expenseCategories = computed(() => [...DEFAULT_EXPENSE, ...(customCategories?.value?.expense || [])])
 const incomeCategories  = computed(() => [...DEFAULT_INCOME,  ...(customCategories?.value?.income  || [])])

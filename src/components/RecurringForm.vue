@@ -143,8 +143,8 @@ const props = defineProps({
 
 const emit = defineEmits(['save-recurring', 'delete-recurring', 'cancel-edit'])
 
-const BASE_EXPENSE_CAT = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Extras Cont', 'Altele']
-const BASE_INCOME_CAT  = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele']
+const BASE_EXPENSE_CAT = ['Mâncare', 'Transport', 'Facturi & Utilități', 'Cumpărături', 'Divertisment', 'Sănătate', 'Educație', 'Casă', 'Extras Cont-Cheltuieli', 'Altele']
+const BASE_INCOME_CAT  = ['Salariu', 'Bonus', 'Investiții', 'Cadouri primite', 'Vânzări', 'Altele', 'Extras Cont-Venituri']
 const customCategories = inject('customCategories', ref({ expense: [], income: [] }))
 const EXPENSE_CATEGORIES = computed(() => [...BASE_EXPENSE_CAT, ...customCategories.value.expense])
 const INCOME_CATEGORIES  = computed(() => [...BASE_INCOME_CAT,  ...customCategories.value.income])
