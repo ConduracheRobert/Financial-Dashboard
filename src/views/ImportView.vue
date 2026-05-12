@@ -233,7 +233,12 @@ const triggerFileInput = () => fileInputRef.value?.click()
 
 const handleFileSelect = (e) => {
   const file = e.target.files[0]
-  if (file) setFile(file)
+  if (!file) return
+  if (file.type !== 'application/pdf') {
+    errorMsg.value = 'Fisierul trebuie sa fie un PDF.'
+    return
+  }
+  setFile(file)
 }
 
 const handleDrop = (e) => {
@@ -246,8 +251,14 @@ const handleDrop = (e) => {
   }
 }
 
+const MAX_PDF_SIZE = 20 * 1024 * 1024 // 20 MB
+
 const setFile = (file) => {
   errorMsg.value = ''
+  if (file.size > MAX_PDF_SIZE) {
+    errorMsg.value = 'Fisierul este prea mare. Limita maxima este 20 MB.'
+    return
+  }
   selectedFile.value = file
 }
 
@@ -292,15 +303,20 @@ const toggleSelectAll = () => {
 
 const doImport = async () => {
   isImporting.value = true
-  const selected = previewTransactions.value.filter(tx => tx.selected)
-
-  const { imported } = await handleImportTransactions(
-    selected.map(tx => ({ name: tx.description, amount: tx.amount, category: tx.category, date: tx.date }))
-  )
-
-  importedCount.value = imported
-  isImporting.value = false
-  currentStep.value = 3
+  try {
+    const selected = previewTransactions.value.filter(tx => tx.selected)
+    const { imported } = await handleImportTransactions(
+      selected.map(tx => ({ name: tx.description, amount: tx.amount, category: tx.category, date: tx.date }))
+    )
+    importedCount.value = imported
+    currentStep.value = 3
+  } catch (err) {
+    if (import.meta.env.DEV) console.error('[ImportView] doImport:', err)
+    errorMsg.value = 'Eroare la import. Incearca din nou.'
+    currentStep.value = 1
+  } finally {
+    isImporting.value = false
+  }
 }
 
 const resetImport = () => {
