@@ -1,28 +1,32 @@
-// Import funcțiile necesare din Firebase
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-// 1. Adaug importul pentru baza de date Firestore
 import { getFirestore } from "firebase/firestore";
 
-// Aici îmi pun configurația unică generată de Firebase pentru proiectul meu
+const REQUIRED_VARS = [
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN',
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_STORAGE_BUCKET',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APP_ID',
+]
+for (const key of REQUIRED_VARS) {
+  if (!import.meta.env[key]) throw new Error(`Variabila de mediu lipsa: ${key}`)
+}
+
 const firebaseConfig = {
-  apiKey: "AIzaSyCEYlzt5NWhM0jgOaNOOlgoZ04LgPIYonc",
-  authDomain: "licenta-findash.firebaseapp.com",
-  projectId: "licenta-findash",
-  storageBucket: "licenta-findash.firebasestorage.app",
-  messagingSenderId: "825619783735",
-  appId: "1:825619783735:web:1904032b3732b8e1d09fb2"
-};
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+}
 
-// Inițializez aplicația mea Firebase
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig)
 
-// Extrag serviciul de Autentificare și setez Google ca metodă de logare
-export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider();
+export const auth = getAuth(app)
+export const provider = new GoogleAuthProvider()
+export const db = getFirestore(app)
 
-// 2. Inițializez și export baza mea de date în cloud ca să o pot folosi în aplicație
-export const db = getFirestore(app);
-
-// Export funcțiile pe care le voi folosi
-export { signInWithPopup, signOut };
+export { signInWithPopup, signOut }
