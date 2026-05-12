@@ -1,0 +1,16 @@
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Content Security Policy
+    # connect-src: Firebase Auth/Firestore, exchange rate API, Gemini AI
+    # img-src: flagcdn si devicons pentru flag + Google icon din header
+    # worker-src: blob: necesar pentru pdfjs-dist web worker
+    # frame-src: Google OAuth popup si Firebase Auth domain
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.jsdelivr.net https://flagcdn.com; font-src 'self'; connect-src 'self' https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://v6.exchangerate-api.com https://api.exchangerate-api.com https://generativelanguage.googleapis.com; worker-src 'self' blob:; frame-src https://accounts.google.com https://licenta-findash.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+    # Alte headere de securitate
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
