@@ -142,9 +142,20 @@ const referenceDate = ref(new Date().toISOString().split('T')[0])
 const searchQuery = ref('')
 const selectedCategory = ref('')
 
+// Parsa JSON din storage fara a arunca exceptii; returneaza fallback la eroare/format invalid
+function safeJsonParse(raw, fallback) {
+  try {
+    if (raw === null || raw === undefined) return fallback
+    const parsed = JSON.parse(raw)
+    return parsed !== null && typeof parsed === typeof fallback ? parsed : fallback
+  } catch {
+    return fallback
+  }
+}
+
 // Categorii custom (localStorage)
 const customCategories = ref(
-  JSON.parse(localStorage.getItem('custom_categories') || '{"expense":[],"income":[]}')
+  safeJsonParse(localStorage.getItem('custom_categories'), { expense: [], income: [] })
 )
 const addCustomCategory = (name, type) => {
   const trimmed = name.trim()
@@ -164,7 +175,7 @@ const globalRates = ref({ EUR: 1, USD: 1 })
 
 // BUGETE - State Management
 const budgets = ref([])
-const alertedBudgets = ref(new Set(JSON.parse(sessionStorage.getItem('alerted_budgets') || '[]')))
+const alertedBudgets = ref(new Set(safeJsonParse(sessionStorage.getItem('alerted_budgets'), [])))
 const lastAlertMonth = ref(new Date().getMonth())
 
 // RECURENTE - State Management
@@ -255,20 +266,21 @@ const handleLogout = async () => {
 }
 // --- LOGICĂ PENTRU VIZITATOR (GUEST MODE) ---
 const continueAsGuest = () => {
-  // Creăm un utilizator fals pentru a debloca interfața
+  // UUID persistent per sesiune de browser (sessionStorage, nu localStorage)
+  let guestId = sessionStorage.getItem('guest_session_id')
+  if (!guestId) {
+    guestId = crypto.randomUUID()
+    sessionStorage.setItem('guest_session_id', guestId)
+  }
+
   user.value = {
-    uid: 'local_guest',
+    uid: guestId,
     email: 'Vizitator (Mod Local)',
     isGuest: true
   }
-  
-  // Încărcăm tranzacțiile din memoria locală a browserului (dacă există)
+
   const savedLocal = localStorage.getItem('guest_transactions')
-  if (savedLocal) {
-    transactions.value = JSON.parse(savedLocal)
-  } else {
-    transactions.value = []
-  }
+  transactions.value = Array.isArray(safeJsonParse(savedLocal, [])) ? safeJsonParse(savedLocal, []) : []
   
   loadBudgets()
   loadRecurring()
@@ -288,7 +300,7 @@ const openEditModal = (item) => {
 
 // --- LOGICĂ TRANZACȚII ---
 const handleSaveTransaction = async (transaction) => {
-  if (user.value.uid === 'local_guest') {
+  if (user.value.isGuest) {
     if (transaction.id) {
       const idx = transactions.value.findIndex(t => t.id === transaction.id)
       if (idx !== -1) transactions.value[idx] = { ...transaction }
@@ -491,11 +503,11 @@ const handleSaveAndClose = async (data) => {
       }
     }
   } catch (error) {
-    console.error("EROARE LA SALVAREA ÎN FIREBASE:", error)
+    if (import.meta.env.DEV) console.error("EROARE LA SALVAREA IN FIREBASE:", error)
     addToast(
       currentLang.value === 'ro'
-        ? '❌ Eroare la salvare. Verifică consola pentru detalii.'
-        : '❌ Save failed. Check the console for details.',
+        ? '❌ Eroare la salvare. Incearca din nou.'
+        : '❌ Save failed. Please try again.',
       'error'
     )
     isModalOpen.value = false
@@ -503,6 +515,8 @@ const handleSaveAndClose = async (data) => {
 }
 
 const handleDeleteTransaction = async (id) => {
+  // Ownership guard: ID-ul trebuie sa existe in lista locala (deja filtrata dupa uid)
+  if (!transactions.value.some(t => t.id === id)) return
   await deleteDoc(doc(db, 'transactions', id))
   addToast(
     currentLang.value === 'ro' ? '🗑️ Tranzacție ștearsă.' : '🗑️ Transaction deleted.',
@@ -545,10 +559,9 @@ const handleRates = (rates) => { globalRates.value = rates }
 const loadBudgets = () => {
   if (!user.value) return
   
-  if (user.value.uid === 'local_guest') {
-    // Încarcă din localStorage
-    const saved = localStorage.getItem('guest_budgets')
-    budgets.value = saved ? JSON.parse(saved) : []
+  if (user.value.isGuest) {
+    const parsed = safeJsonParse(localStorage.getItem('guest_budgets'), [])
+    budgets.value = Array.isArray(parsed) ? parsed : []
   } else {
     // Încarcă din Firestore
     const q = query(collection(db, 'budgets'), where('uid', '==', user.value.uid))
@@ -563,7 +576,7 @@ const loadBudgets = () => {
 
 const handleSaveBudget = async (budget) => {
   try {
-    if (user.value.uid === 'local_guest') {
+    if (user.value.isGuest) {
       // Guest mode: localStorage
       if (budget.id) {
         const idx = budgets.value.findIndex(b => b.id === budget.id)
@@ -598,7 +611,7 @@ const handleSaveBudget = async (budget) => {
       'success'
     )
   } catch (error) {
-    console.error('Error saving budget:', error)
+    if (import.meta.env.DEV) console.error('Error saving budget:', error)
     addToast(
       currentLang.value === 'ro' ? '❌ Eroare la salvare.' : '❌ Save failed.',
       'error'
@@ -608,12 +621,13 @@ const handleSaveBudget = async (budget) => {
 
 const handleDeleteBudget = async (id) => {
   try {
-    if (user.value.uid === 'local_guest') {
+    if (user.value.isGuest) {
       // Guest mode
       budgets.value = budgets.value.filter(b => b.id !== id)
       localStorage.setItem('guest_budgets', JSON.stringify(budgets.value))
     } else {
-      // Firestore
+      // Ownership guard: ID-ul trebuie sa existe in lista locala (deja filtrata dupa uid)
+      if (!budgets.value.some(b => b.id === id)) return
       await deleteDoc(doc(db, 'budgets', id))
     }
     addToast(
@@ -676,7 +690,7 @@ const checkAndGenerateRecurring = async (manual = false, overrideDate = null) =>
 
     for (const date of periods) {
       const txData = { name: r.name, amount: r.amount, category: r.category, date }
-      if (user.value.uid === 'local_guest') {
+      if (user.value.isGuest) {
         guestTxToAdd.push({ ...txData, id: Date.now().toString() + Math.random() })
       } else {
         await addDoc(collection(db, 'transactions'), { ...txData, uid: user.value.uid })
@@ -685,7 +699,7 @@ const checkAndGenerateRecurring = async (manual = false, overrideDate = null) =>
     }
 
     const newLastGenerated = now.toISOString()
-    if (user.value.uid === 'local_guest') {
+    if (user.value.isGuest) {
       const idx = recurringTransactions.value.findIndex(x => x.id === r.id)
       if (idx !== -1) recurringTransactions.value[idx].lastGenerated = newLastGenerated
     } else {
@@ -693,7 +707,7 @@ const checkAndGenerateRecurring = async (manual = false, overrideDate = null) =>
     }
   }
 
-  if (user.value.uid === 'local_guest' && guestTxToAdd.length > 0) {
+  if (user.value.isGuest && guestTxToAdd.length > 0) {
     transactions.value.push(...guestTxToAdd)
     localStorage.setItem('guest_transactions', JSON.stringify(transactions.value))
     localStorage.setItem('guest_recurring', JSON.stringify(recurringTransactions.value))
@@ -723,9 +737,9 @@ const checkAndGenerateRecurring = async (manual = false, overrideDate = null) =>
 const loadRecurring = () => {
   if (!user.value) return
 
-  if (user.value.uid === 'local_guest') {
-    const saved = localStorage.getItem('guest_recurring')
-    recurringTransactions.value = saved ? JSON.parse(saved) : []
+  if (user.value.isGuest) {
+    const parsed = safeJsonParse(localStorage.getItem('guest_recurring'), [])
+    recurringTransactions.value = Array.isArray(parsed) ? parsed : []
     checkAndGenerateRecurring()
   } else {
     const q = query(collection(db, 'recurringTransactions'), where('uid', '==', user.value.uid))
@@ -739,7 +753,7 @@ const loadRecurring = () => {
 const handleSaveRecurring = async (recurring) => {
   try {
     const { id, ...data } = recurring
-    if (user.value.uid === 'local_guest') {
+    if (user.value.isGuest) {
       if (id) {
         const idx = recurringTransactions.value.findIndex(r => r.id === id)
         if (idx !== -1) recurringTransactions.value[idx] = { ...recurringTransactions.value[idx], ...data }
@@ -767,14 +781,14 @@ const handleSaveRecurring = async (recurring) => {
       'success'
     )
   } catch (error) {
-    console.error('Error saving recurring:', error)
+    if (import.meta.env.DEV) console.error('Error saving recurring:', error)
     addToast(currentLang.value === 'ro' ? '❌ Eroare la salvare.' : '❌ Save failed.', 'error')
   }
 }
 
 const handleDeleteRecurring = async (id) => {
   try {
-    if (user.value.uid === 'local_guest') {
+    if (user.value.isGuest) {
       recurringTransactions.value = recurringTransactions.value.filter(r => r.id !== id)
       localStorage.setItem('guest_recurring', JSON.stringify(recurringTransactions.value))
     } else {
@@ -935,7 +949,7 @@ const daysRemaining = computed(() => {
 // --- STERGERE DATE ---
 const deleteAllTransactions = async () => {
   try {
-    if (user.value?.uid === 'local_guest') {
+    if (user.value?.isGuest) {
       transactions.value = []
       localStorage.removeItem('guest_transactions')
     } else {
@@ -948,7 +962,7 @@ const deleteAllTransactions = async () => {
 }
 const deleteAllBudgets = async () => {
   try {
-    if (user.value?.uid === 'local_guest') {
+    if (user.value?.isGuest) {
       budgets.value = []
       localStorage.removeItem('guest_budgets')
     } else {
