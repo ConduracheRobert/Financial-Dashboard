@@ -35,10 +35,10 @@ defineEmits(['delete-transaction', 'edit-transaction'])
 </script>
 
 <style scoped>
-/* Păstrează CSS-ul tău existent, dar adaugă asta la final: */
+
 .edit-btn { background: transparent; border: none; cursor: pointer; font-size: 16px; opacity: 0.5; transition: 0.2s; margin-right: 5px; }
 .edit-btn:hover { opacity: 1; transform: scale(1.1); filter: brightness(1.2); }
-/* RESTUL STILURILOR TALE RĂMÂN AICI... */
+
 .empty-list { text-align: center; padding: 40px 20px; color: #7f8c8d; background: #f8f9fa; border-radius: 12px; border: 2px dashed #dcdde1; }
 .empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.5; }
 .transaction-list { display: flex; flex-direction: column; gap: 10px; }
