@@ -5,7 +5,7 @@
         <p>Conectează-te pentru a-ți salva datele în cloud, sau testează aplicația local.</p>
         
         <button @click="handleLogin" class="google-btn">
-  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/google/google-original.svg" alt="Google" class="google-icon" />
+  <img src="/src/assets/google-icon.svg" alt="Google" class="google-icon" />
   Conectare cu Google
 </button>
         
