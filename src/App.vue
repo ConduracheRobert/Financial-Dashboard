@@ -1476,15 +1476,18 @@ body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
 }
 .login-box {
   background: white; padding: 40px; border-radius: 15px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
-  max-width: 400px; width: 90%; display: flex; flex-direction: column; gap: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  max-width: 400px; width: 90%;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 15px;
 }
 .login-title {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
+  text-align: center;
 }
 .login-title .login-icon {
   font-size: 2rem;
