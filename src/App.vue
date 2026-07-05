@@ -1525,6 +1525,15 @@ body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
   .google-btn, .guest-btn { width: 100%; }
 }
 
+/* Fix aliniere titlu login pe desktop */
+@media (min-width: 769px) {
+  .login-title {
+    margin-left: auto;
+    margin-right: auto;
+    justify-content: center;
+  }
+}
+
 /* Dark mode pentru login */
 body.dark-mode .login-screen { background: #1a1a2e; }
 body.dark-mode .login-box { background: #16213e; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
