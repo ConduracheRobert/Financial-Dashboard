@@ -392,4 +392,15 @@ body.dark-mode .input-group select {
 body.dark-mode .type-btn          { background: #1a1a2e !important; border-color: #0f3460 !important; color: #a5b1c2 !important; }
 body.dark-mode .type-btn.active   { background: #3498db !important; color: white !important; border-color: #3498db !important; }
 body.dark-mode .cancel-btn        { background: #1a1a2e !important; border-color: #0f3460 !important; color: #a5b1c2 !important; }
+
+@media (max-width: 480px) {
+  .recurring-row { flex-wrap: wrap; row-gap: 8px; }
+  .row-info { flex: 1 1 65%; }
+  .row-name { white-space: normal; overflow-wrap: break-word; }
+  .row-meta { white-space: normal; overflow-wrap: break-word; }
+  .type-btn { min-height: 44px; }
+  .input-group input, .input-group select { min-height: 44px; }
+  .form-actions { flex-direction: column; }
+  .submit-btn, .cancel-btn { min-height: 44px; width: 100%; }
+}
 </style>

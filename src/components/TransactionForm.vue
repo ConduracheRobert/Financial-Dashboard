@@ -150,6 +150,13 @@ const submitForm = () => {
 .submit-btn.expense:hover { background: #c0392b; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
+@media (max-width: 768px) {
+  .smart-form { gap: 14px; }
+  .toggle-btn { min-height: 44px; font-size: 14px; }
+  .input-group input, .input-group select { min-height: 44px; font-size: 14px; }
+  .submit-btn { min-height: 48px; }
+}
+
 /* --- FORȚARE DARK MODE PENTRU BUTOANE (Varianta Nucleară) --- */
 :global(body.dark-mode) .type-toggle { background-color: #0f3460 !important; }
 :global(body.dark-mode) .toggle-btn { color: #a5b1c2 !important; }

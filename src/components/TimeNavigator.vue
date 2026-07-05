@@ -80,5 +80,12 @@ const displayDate = computed(() => {
 .time-filters button { border: none; background: transparent; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; color: #7f8c8d; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
 .time-filters button:hover { color: #2c3e50; }
 .time-filters button.active { background: #3498db; color: white; box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3); }
-@media (max-width: 600px) { .time-navigator-container { flex-direction: column; justify-content: center; } .time-filters { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 768px) {
+  .time-navigator-container { flex-direction: column; justify-content: center; padding: 12px 14px; gap: 10px; margin-bottom: 14px; }
+  .nav-group { width: 100%; justify-content: space-between; }
+  .icon-btn { min-width: 44px; min-height: 44px; }
+  .date-display { font-size: 14px; min-width: 0; flex: 1; }
+  .time-filters { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); padding: 4px; }
+  .time-filters button { min-height: 40px; font-size: 12px; padding: 8px 4px; }
+}
 </style>

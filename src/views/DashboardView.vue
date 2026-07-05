@@ -136,4 +136,11 @@ body.dark-mode .export-btn:hover { background: #3498db; color: white; border-col
 .history-link:hover { background: rgba(52,152,219,0.18); }
 body.dark-mode .history-link { background: rgba(52,152,219,0.12) !important; }
 body.dark-mode .history-link:hover { background: rgba(52,152,219,0.25) !important; }
+
+@media (max-width: 768px) {
+  .transactions-section { padding: 14px; margin-top: 14px; }
+  .list-header { flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+  .list-header h3 { font-size: 16px; }
+  .export-btn { min-height: 44px; padding: 8px 14px; font-size: 14px; }
+}
 </style>

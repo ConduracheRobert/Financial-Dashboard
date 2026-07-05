@@ -1080,24 +1080,41 @@ provide('deleteAllBudgets', deleteAllBudgets)
 
 /* === RESPONSIV HEADER SI CONTINUT (MOBIL) === */
 @media (max-width: 768px) {
-  .app-header { flex-wrap: wrap; row-gap: 8px; padding: 10px 14px; }
-  .header-left h2 { font-size: 16px; max-width: 55vw; }
-  .header-right { gap: 8px; }
-  .user-email { display: none; }
+  /* Header pe 2 randuri: rand1 = hamburger+titlu+iesire, rand2 = limba+tema+email */
+  .app-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "hamburger title logout"
+      "lang theme email";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 8px;
+    padding: 10px 14px;
+  }
+  .header-left, .header-right { display: contents; }
+  .hamburger-btn { grid-area: hamburger; min-height: 44px; min-width: 44px; }
+  .header-left h2 { grid-area: title; font-size: 16px; }
+  .logout-btn { grid-area: logout; min-height: 44px; padding: 8px 12px; font-size: 14px; }
+  .lang-btn { grid-area: lang; min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
+  .theme-btn { grid-area: theme; min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
+  .user-email { grid-area: email; justify-self: end; font-size: 14px; max-width: 150px; }
   .lang-text { display: none; }
-  .lang-btn, .theme-btn { min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
-  .hamburger-btn { min-height: 44px; min-width: 44px; }
-  .logout-btn { min-height: 44px; padding: 8px 12px; font-size: 14px; }
   .main-content { padding: 14px; }
   .currency-tabs { padding: 6px; gap: 6px; }
   .currency-tabs button { padding: 8px 12px; font-size: 14px; min-height: 44px; }
   .transactions-section { padding: 14px; margin-top: 16px; }
   .fab-button { width: 52px; height: 52px; font-size: 26px; bottom: 18px; right: 18px; }
+  .sidebar { width: 82vw; max-width: 300px; left: -85vw; }
+  .list-header { flex-wrap: wrap; gap: 10px; }
 }
 
 @media (max-width: 480px) {
-  .header-left h2 { max-width: 50vw; font-size: 15px; }
+  .app-header { padding: 8px 12px; column-gap: 8px; }
+  .header-left h2 { font-size: 15px; }
+  .user-email { max-width: 110px; font-size: 13px; }
   .modal-content { padding: 16px; width: 94%; }
+  .sidebar { width: 85vw; }
 }
 .transactions-section { margin-top: 30px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .transactions-section h3 { margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f3f5; padding-bottom: 10px; }
@@ -1365,6 +1382,30 @@ body.dark-mode .transaction-item:hover {
 :global(body.dark-mode) .modal-header h3 { color: #f1f1f1; }
 body, #app, button, input, select, textarea, h1, h2, h3, p, span, div {
   font-family: "Avenir", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif !important;
+}
+
+/* =========================================
+   RESPONSIVE GLOBAL — reguli valabile pe toata aplicatia
+   ========================================= */
+* { box-sizing: border-box; }
+html, body, #app { overflow-x: hidden; max-width: 100vw; }
+img, svg { max-width: 100%; height: auto; }
+
+@media (max-width: 768px) {
+  body { font-size: 14px; }
+
+  /* Touch target minim pe butoanele reale de actiune (excludem iconitele mici inline) */
+  button:not(.icon-btn):not(.edit-btn):not(.delete-btn):not(.close-btn):not(.action-btn):not(.hamburger-btn):not(.cat-del):not(.remove-btn) {
+    min-height: 44px;
+  }
+  .btn-dashboard { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+
+  /* Orice container flex trebuie sa se poata infasura pe mobil ca sa nu depaseasca ecranul */
+  .summary-container, .header-row, .card-top, .preview-top, .summary-badges,
+  .pref-row, .danger-row, .about-content, .sim-data-bar, .sim-results,
+  .filters-bar, .filter-toggle, .success-actions {
+    flex-wrap: wrap;
+  }
 }
 
 /* =========================================

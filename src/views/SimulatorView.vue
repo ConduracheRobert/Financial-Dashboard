@@ -497,9 +497,26 @@ body.dark-mode .progress-label-row { color: #dfe6e9 !important; }
 body.dark-mode .sim-progress-track { background: #0f3460 !important; }
 body.dark-mode .progress-sub       { color: #4a5568 !important; }
 
-@media (max-width: 700px) {
-  .sim-data-bar { flex-direction: column; gap: 12px; padding: 16px; }
+@media (max-width: 768px) {
+  .simulator-page { gap: 14px; }
+  .sim-data-bar { flex-direction: column; gap: 12px; padding: 14px; }
   .sim-data-sep { width: 100%; height: 1px; margin: 0; }
+  .sim-data-item { min-width: 0; width: 100%; }
+  .sim-card { padding: 16px; }
+  .sim-card-header h3 { font-size: 15px; }
+  .sim-subtitle { font-size: 12px; }
   .sim-results  { grid-template-columns: 1fr; }
+  .sim-result-card { padding: 12px; }
+  .input-group-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .num-input-wrap { width: 100%; }
+  .sim-num-input { flex: 1; width: auto; min-width: 0; }
+  .projection-chart-wrap { height: 200px; }
+}
+
+@media (max-width: 480px) {
+  .sim-card { padding: 12px; }
+  .sim-data-bar { padding: 12px; }
+  .sim-data-val { font-size: 17px; }
+  .projection-chart-wrap { height: 180px; }
 }
 </style>

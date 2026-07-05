@@ -54,4 +54,19 @@ defineEmits(['delete-transaction', 'edit-transaction'])
 .amount.expense { color: #c0392b; }
 .delete-btn { background: transparent; border: none; cursor: pointer; font-size: 18px; opacity: 0.5; transition: 0.2s; }
 .delete-btn:hover { opacity: 1; transform: scale(1.1); }
+
+@media (max-width: 768px) {
+  .transaction-item { flex-wrap: wrap; padding: 12px; row-gap: 8px; }
+  .item-details { min-width: 0; flex: 1 1 65%; gap: 10px; }
+  .info { min-width: 0; }
+  .name { font-size: 14px; white-space: normal; overflow-wrap: break-word; }
+  .category-date { font-size: 12px; white-space: normal; overflow-wrap: break-word; }
+  .item-actions { flex-shrink: 0; margin-left: auto; }
+  .amount { font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+  .transaction-item { padding: 10px; }
+  .icon { font-size: 20px; }
+}
 </style>

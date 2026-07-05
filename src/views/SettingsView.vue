@@ -468,11 +468,24 @@ body.dark-mode .about-desc    { color: #a5b1c2 !important; }
 body.dark-mode .about-footer  { color: #a5b1c2 !important; }
 body.dark-mode .tech-badge    { background: rgba(52,152,219,0.15) !important; color: #3498db !important; }
 
-@media (max-width: 700px) {
-  .pref-row    { flex-direction: column; align-items: flex-start; }
-  .danger-row  { flex-direction: column; align-items: flex-start; }
-  .danger-btn  { width: 100%; min-width: unset; }
-  .about-content { flex-direction: column; }
+@media (max-width: 768px) {
+  .settings-page { gap: 14px; }
+  .settings-card { padding: 14px; }
+  .section-title { font-size: 15px; margin-bottom: 14px; }
+  .pref-row    { flex-direction: column; align-items: flex-start; padding: 12px 0; }
+  .toggle-group, .cat-tabs { width: 100%; }
+  .tog-btn, .cat-tab { flex: 1; min-height: 40px; }
   .cat-add-row { flex-direction: column; }
+  .cat-input, .add-cat-btn { min-height: 44px; width: 100%; }
+  .danger-row  { flex-direction: column; align-items: stretch; padding: 12px 0; }
+  .danger-btn  { width: 100%; min-width: unset; min-height: 44px; }
+  .about-content { flex-direction: column; }
+  .about-name { font-size: 22px; }
+  .about-footer { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
+
+@media (max-width: 480px) {
+  .settings-card { padding: 12px; }
+  .cat-list { max-height: 220px; }
 }
 </style>

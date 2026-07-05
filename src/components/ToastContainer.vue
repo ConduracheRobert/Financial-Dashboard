@@ -90,4 +90,9 @@ defineProps({
   opacity: 0;
   transform: translateY(20px);
 }
+
+@media (max-width: 480px) {
+  .toast-container { left: 12px; right: 12px; bottom: 12px; }
+  .toast-message { min-width: 0; max-width: 100%; width: 100%; padding: 12px 14px; font-size: 13px; }
+}
 </style>

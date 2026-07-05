@@ -32,5 +32,8 @@ defineEmits(['update:searchQuery', 'update:selectedCategory'])
 .search-input { flex: 2; padding: 12px 15px; border: 1px solid #dcdde1; border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s; }
 .category-select { flex: 1; padding: 12px 15px; border: 1px solid #dcdde1; border-radius: 8px; font-size: 14px; outline: none; cursor: pointer; }
 .search-input:focus, .category-select:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
-@media (max-width: 600px) { .transaction-filters { flex-direction: column; } }
+@media (max-width: 768px) {
+  .transaction-filters { flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .search-input, .category-select { width: 100%; font-size: 14px; min-height: 44px; padding: 10px 12px; }
+}
 </style>

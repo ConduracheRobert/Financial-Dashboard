@@ -447,5 +447,17 @@ body.dark-mode .bubble-line strong { color: #be2edd !important; }
     font-size: 10px;
     letter-spacing: 0;
   }
+  .card-popover {
+    left: 0;
+    right: 0;
+    min-width: 0;
+    max-width: calc(100vw - 32px);
+  }
+  .floating-bubble {
+    max-width: calc(100vw - 32px);
+  }
+  .bubble-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

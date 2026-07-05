@@ -1020,14 +1020,38 @@ body.dark-mode .badge--income { background: rgba(46, 204, 113, 0.15) !important;
 body.dark-mode .badge--expense { background: rgba(231, 76, 60, 0.15) !important; }
 
 /* ── Responsive ── */
-@media (max-width: 600px) {
-  .stepper { gap: 0; }
+@media (max-width: 768px) {
+  .import-view { padding: 12px 0; }
+  .stepper { gap: 0; margin-bottom: 24px; padding: 0 8px; }
   .step-label { display: none; }
-  .step-panel { padding: 24px 16px; }
-  .step-panel--wide { padding: 20px 12px; }
+  .step-circle { width: 34px; height: 34px; font-size: 13px; }
+  .step-panel { padding: 20px 14px; }
+  .step-panel--wide { padding: 16px 10px; }
+  .panel-title { font-size: 18px; }
+  .panel-subtitle { font-size: 13px; }
+  .dropzone { padding: 28px 14px; }
+  .dropzone-icon { font-size: 40px; }
+  .process-btn, .import-btn, .back-btn, .toggle-all-btn, .add-cat-btn, .btn-dashboard, .btn-restart { min-height: 44px; }
+  .preview-top { gap: 10px; }
+  .summary-badges { gap: 8px; }
+  .badge { font-size: 12px; padding: 5px 10px; }
+  .preview-table { font-size: 12px; }
+  .preview-table th, .preview-table td { padding: 8px 10px; }
+  .col-desc { max-width: 140px; }
+  .cat-select { max-width: 130px; font-size: 12px; }
   .preview-footer { flex-direction: column; }
-  .import-btn, .back-btn { width: 100%; }
+  .import-btn, .back-btn { width: 100%; min-width: unset; }
   .process-btn { max-width: 100%; }
   .bank-select { max-width: 100%; }
+  .success-actions { flex-direction: column; align-items: stretch; }
+  .btn-dashboard, .btn-restart { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .step-panel { padding: 16px 10px; }
+  .col-desc { max-width: 100px; }
+  .th-check { width: 32px; }
+  .success-icon { font-size: 56px; }
+  .step-success { padding: 40px 20px; }
 }
 </style>

@@ -414,10 +414,30 @@ body.dark-mode .results-count { color: #6c7a89 !important; }
 body.dark-mode .empty-history { background: #16213e !important; border-color: #0f3460 !important; }
 body.dark-mode .empty-history p { color: #6c7a89 !important; }
 
-@media (max-width: 700px) {
-  .page-header  { flex-direction: column; gap: 12px; }
-  .filters-bar  { flex-direction: column; align-items: stretch; }
-  .filter-toggle { justify-content: center; }
-  .filter-input, .filter-select { width: 100%; }
+@media (max-width: 768px) {
+  .history-page { gap: 12px; }
+  .page-header  { flex-direction: column; gap: 12px; padding: 14px 16px; align-items: stretch; }
+  .page-header h2 { font-size: 17px; }
+  .export-btn   { width: 100%; text-align: center; min-height: 44px; }
+  .filters-bar  { flex-direction: column; align-items: stretch; padding: 12px 14px; gap: 8px; }
+  .filter-toggle { justify-content: center; flex-wrap: wrap; }
+  .ftbtn { min-height: 40px; }
+  .filter-input, .filter-select { width: 100%; min-height: 44px; }
+  .results-row { flex-wrap: wrap; }
+
+  /* Randul de tranzactie: nu mai fortam o singura linie, lasam sa curga pe 2 randuri fara sa taiem textul */
+  .tx-item { flex-wrap: wrap; padding: 12px 14px; row-gap: 8px; }
+  .tx-left { min-width: 0; flex: 1 1 65%; }
+  .tx-name { font-size: 14px; white-space: normal; overflow-wrap: break-word; }
+  .tx-meta { font-size: 12px; white-space: normal; overflow-wrap: break-word; }
+  .tx-right { flex-shrink: 0; margin-left: auto; }
+  .tx-amount { min-width: 0; font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+  .page-header  { padding: 12px 14px; }
+  .filters-bar  { padding: 10px 12px; }
+  .tx-item { padding: 10px 12px; }
+  .tx-icon { font-size: 18px; }
 }
 </style>
