@@ -1,7 +1,10 @@
 <template>
   <div v-if="!user" class="login-screen">
       <div class="login-box">
-        <h2><span class="login-icon" aria-hidden="true">💰</span><span class="login-title">Financial Dashboard</span></h2>
+        <div class="login-title">
+          <span class="login-icon" aria-hidden="true">💰</span>
+          <h1>Financial Dashboard</h1>
+        </div>
         <p>Conectează-te pentru a-ți salva datele în cloud, sau testează aplicația local.</p>
         
         <button @click="handleLogin" class="google-btn">
@@ -1476,12 +1479,25 @@ body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
   box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
   max-width: 400px; width: 90%; display: flex; flex-direction: column; gap: 15px;
 }
-.login-box h2 {
-  margin: 0; color: #2c3e50; font-size: 24px;
-  display: flex; align-items: center; justify-content: center; gap: 12px;
+.login-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
 }
-.login-icon { font-size: 1em; line-height: 1; }
-.login-title { line-height: 1; }
+.login-title .login-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.login-title h1 {
+  text-align: left;
+  margin: 0;
+  color: #2c3e50;
+  font-size: 24px;
+  line-height: 1;
+}
 .login-box p { color: #7f8c8d; font-size: 14px; margin-bottom: 10px; line-height: 1.5; }
 
 .google-btn {
@@ -1502,7 +1518,7 @@ body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
 /* Dark mode pentru login */
 body.dark-mode .login-screen { background: #1a1a2e; }
 body.dark-mode .login-box { background: #16213e; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-body.dark-mode .login-box h2 { color: #f1f1f1; }
+body.dark-mode .login-title h1 { color: #f1f1f1; }
 body.dark-mode .google-btn { background: #2c3e50; color: #fff; border-color: #4a627a; }
 body.dark-mode .google-btn:hover { background: #34495e; }
 
