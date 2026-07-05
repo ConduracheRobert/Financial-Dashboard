@@ -269,6 +269,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 15px;
   margin-bottom: 20px;
+  overflow: visible;
 }
 
 .summary-card {
@@ -282,10 +283,15 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   gap: 15px;
   border: 2px solid transparent;
   transition: all 0.2s;
+  overflow: visible;
 }
 .filter-card    { cursor: pointer; }
 .filter-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
 .interactive-card { cursor: default; }
+
+.balance.active-filter,
+.income.active-filter,
+.expense.active-filter { z-index: 20; }
 
 .balance.active-filter { border-color: #3498db; background: #f0f8ff; }
 .income.active-filter  { border-color: #2ecc71; background: #f0fff4; }
@@ -321,7 +327,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   box-shadow: 0 8px 24px rgba(0,0,0,0.13);
   border: 1px solid #e2e8f0;
   padding: 12px 14px;
-  z-index: 500;
+  z-index: 9999;
   animation: fadeIn 0.15s ease;
 }
 
