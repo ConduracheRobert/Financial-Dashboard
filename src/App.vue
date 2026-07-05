@@ -1503,11 +1503,13 @@ body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
 }
 .login-box p { color: #7f8c8d; font-size: 14px; margin-bottom: 10px; line-height: 1.5; }
 
+.google-btn, .guest-btn {
+  width: 280px; max-width: 100%; box-sizing: border-box;
+  padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 16px;
+}
 .google-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   background: #ffffff; color: #3c4043; border: 1px solid #dadce0;
-  width: 100%; box-sizing: border-box;
-  padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 16px;
 }
 .google-btn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .google-icon { width: 20px; height: 20px; }
@@ -1515,10 +1517,13 @@ body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
 /* Butonul de Vizitator - Fără fundal, doar contur elegant */
 .guest-btn {
   background: transparent; color: #3498db; border: 2px solid #3498db;
-  width: 100%; box-sizing: border-box;
-  padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 16px;
 }
 .guest-btn:hover { background: rgba(52, 152, 219, 0.1); }
+
+/* Pe mobil, ambele butoane ocupa toata latimea cardului de login */
+@media (max-width: 768px) {
+  .google-btn, .guest-btn { width: 100%; }
+}
 
 /* Dark mode pentru login */
 body.dark-mode .login-screen { background: #1a1a2e; }
