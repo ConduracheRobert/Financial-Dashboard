@@ -2,7 +2,7 @@
   <div v-if="!user" class="login-screen">
       <div class="login-box">
         <div class="login-title">
-          <span class="login-icon" aria-hidden="true">💰</span>
+          <span class="login-emoji">💰</span>
           <h1>Financial Dashboard</h1>
         </div>
         <p>Conectează-te pentru a-ți salva datele în cloud, sau testează aplicația local.</p>
@@ -1489,16 +1489,16 @@ body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
   width: 100%;
   text-align: center;
 }
-.login-title .login-icon {
-  font-size: 2rem;
-  flex-shrink: 0;
-  line-height: 1;
-}
+
 .login-title h1 {
-  text-align: left;
   margin: 0;
-  color: #2c3e50;
-  font-size: 24px;
+  text-align: left;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+}
+
+.login-emoji {
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+  flex-shrink: 0;
   line-height: 1;
 }
 .login-box p { color: #7f8c8d; font-size: 14px; margin-bottom: 10px; line-height: 1.5; }
