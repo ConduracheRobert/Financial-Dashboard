@@ -1065,18 +1065,40 @@ provide('deleteAllBudgets', deleteAllBudgets)
 
 /* HEADER */
 .app-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
-.header-left { display: flex; align-items: center; gap: 15px; }
-.header-left h2 { margin: 0; font-size: 20px; color: #2c3e50; }
-.hamburger-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #34495e; padding: 5px; border-radius: 5px; transition: 0.2s; }
+.header-left { display: flex; align-items: center; gap: 15px; min-width: 0; }
+.header-left h2 { margin: 0; font-size: 20px; color: #2c3e50; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hamburger-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #34495e; padding: 5px; border-radius: 5px; transition: 0.2s; flex-shrink: 0; }
 .hamburger-btn:hover { background: #f1f3f5; }
-.header-right { display: flex; align-items: center; gap: 15px; }
-.user-email { font-size: 14px; color: #7f8c8d; font-weight: 500; }
+.header-right { display: flex; align-items: center; gap: 15px; flex-shrink: 0; }
+.user-email { font-size: 14px; color: #7f8c8d; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .logout-btn { background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
 .logout-btn:hover { background: #c0392b; }
 
 /* MAIN CONTENT */
 .main-content { padding: 25px; max-width: 1440px; margin: 0 auto; width: 100%; }
 @media (min-width: 1600px) { .main-content { max-width: 1600px; padding: 30px 40px; } }
+
+/* === RESPONSIV HEADER SI CONTINUT (MOBIL) === */
+@media (max-width: 768px) {
+  .app-header { flex-wrap: wrap; row-gap: 8px; padding: 10px 14px; }
+  .header-left h2 { font-size: 16px; max-width: 55vw; }
+  .header-right { gap: 8px; }
+  .user-email { display: none; }
+  .lang-text { display: none; }
+  .lang-btn, .theme-btn { min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
+  .hamburger-btn { min-height: 44px; min-width: 44px; }
+  .logout-btn { min-height: 44px; padding: 8px 12px; font-size: 14px; }
+  .main-content { padding: 14px; }
+  .currency-tabs { padding: 6px; gap: 6px; }
+  .currency-tabs button { padding: 8px 12px; font-size: 14px; min-height: 44px; }
+  .transactions-section { padding: 14px; margin-top: 16px; }
+  .fab-button { width: 52px; height: 52px; font-size: 26px; bottom: 18px; right: 18px; }
+}
+
+@media (max-width: 480px) {
+  .header-left h2 { max-width: 50vw; font-size: 15px; }
+  .modal-content { padding: 16px; width: 94%; }
+}
 .transactions-section { margin-top: 30px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .transactions-section h3 { margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f3f5; padding-bottom: 10px; }
 

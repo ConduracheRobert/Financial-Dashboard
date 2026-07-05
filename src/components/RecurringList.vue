@@ -214,6 +214,30 @@ defineEmits(['open-manage', 'delete-recurring', 'edit-recurring', 'generate-now'
   .card-meta { display: none; }
 }
 
+/* === RESPONSIV MOBIL === */
+@media (max-width: 768px) {
+  .recurring-overview { padding: 14px; margin-bottom: 14px; }
+  .recurring-header { flex-wrap: wrap; row-gap: 10px; }
+  .header-text { min-width: 0; flex: 1 1 100%; }
+  .recurring-header h3 { font-size: 16px; }
+  .header-subtitle { font-size: 12px; white-space: normal; overflow-wrap: break-word; }
+  .header-actions { width: 100%; flex-wrap: wrap; }
+  .generate-btn, .manage-btn { min-height: 44px; font-size: 14px; padding: 8px 14px; flex: 1 1 auto; justify-content: center; display: flex; align-items: center; }
+  .recurring-card { flex-wrap: wrap; padding: 10px 12px; }
+  .card-info { min-width: 0; flex: 1 1 55%; }
+  .card-name { font-size: 14px; }
+  .card-amount { font-size: 14px; }
+  .action-btn { min-height: 40px; min-width: 40px; display: flex; align-items: center; justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .recurring-overview { padding: 12px; }
+  .recurring-header h3 { font-size: 15px; }
+  .header-subtitle { font-size: 12px; }
+  .recurring-card { gap: 8px; }
+  .card-name { font-size: 14px; }
+}
+
 /* DARK MODE */
 body.dark-mode .recurring-overview  { background: #16213e; box-shadow: none; }
 body.dark-mode .recurring-header h3 { color: #f1f1f1; }

@@ -398,4 +398,54 @@ body.dark-mode .bubble-line { color: #f1f1f1 !important; }
 body.dark-mode .bubble-line strong { color: #be2edd !important; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* === RESPONSIVE MOBIL === */
+@media (max-width: 768px) {
+  .summary-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .summary-card {
+    padding: 14px;
+    gap: 10px;
+  }
+  .icon {
+    min-width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+  .value {
+    font-size: 16px;
+  }
+  .label {
+    font-size: 11px;
+  }
+  .currency-line {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .summary-card {
+    padding: 12px;
+    gap: 8px;
+  }
+  .icon {
+    min-width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+  .value {
+    font-size: 14px;
+  }
+  .label {
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+}
 </style>

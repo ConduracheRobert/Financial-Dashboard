@@ -326,6 +326,29 @@ function adaptedAmountStr(item) {
   .alert-badge { align-self: flex-start; }
 }
 
+/* === RESPONSIV MOBIL === */
+@media (max-width: 768px) {
+  .budget-overview { padding: 14px; margin-bottom: 14px; }
+  .budget-section-header { flex-wrap: wrap; row-gap: 10px; }
+  .header-text { min-width: 0; flex: 1 1 100%; }
+  .budget-section-header h3 { font-size: 16px; }
+  .header-subtitle { font-size: 12px; }
+  .manage-btn { min-height: 44px; font-size: 14px; padding: 8px 14px; width: 100%; justify-content: center; display: flex; align-items: center; }
+  .budget-card { padding: 12px; gap: 8px; }
+  .cat-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .cat-amounts { font-size: 12px; }
+  .pct-label { font-size: 12px; }
+  .remaining-text { font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .budget-overview { padding: 12px; }
+  .budget-section-header h3 { font-size: 15px; }
+  .budget-card { padding: 10px; }
+  .card-top { gap: 8px; }
+  .cat-icon { width: 32px; height: 32px; font-size: 16px; }
+}
+
 /* ===================================================
    DARK MODE — pattern identic cu DashboardSummary
    (body.dark-mode .class in scoped = body.dark-mode .class[data-v-xxx])
