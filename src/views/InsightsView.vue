@@ -695,7 +695,7 @@ const localAnalysis = computed(() => {
   void localAnalysisTrigger.value
   const curExp     = monthComparison.value.current
   const curInc     = selectedMonthIncome.value
-  const rate       = savingsRate.value
+  const rate       = curInc > 0 ? ((curInc - curExp) / curInc * 100).toFixed(1) : '0.0'
   const domCat     = topCategoriesSelectedMonth.value[0]
   const change     = monthComparison.value.change
   const exceeded   = exceededBudgets.value
