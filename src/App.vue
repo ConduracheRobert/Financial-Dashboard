@@ -56,6 +56,7 @@
           <RouterLink to="/" exactActiveClass="active" @click="isSidebarOpen = false">📊 {{ t.dashboard }}</RouterLink>
           <RouterLink to="/insights" activeClass="active" @click="isSidebarOpen = false">📈 {{ t.insights }}</RouterLink>
           <RouterLink to="/history" activeClass="active" @click="isSidebarOpen = false">📝 {{ t.history }}</RouterLink>
+          <RouterLink to="/simulator" activeClass="active" @click="isSidebarOpen = false">🧮 Simulator</RouterLink>
           <RouterLink to="/settings" activeClass="active" @click="isSidebarOpen = false">⚙️ {{ t.settings }}</RouterLink>
           <RouterLink to="/import" activeClass="active" @click="isSidebarOpen = false">📥 {{ t.importExtras }}</RouterLink>
         </nav>
