@@ -1530,7 +1530,7 @@ body.dark-mode .smart-form .input-group label { color: #a5b1c2 !important; }
   .login-title {
     margin-left: auto;
     margin-right: auto;
-    justify-content: center;
+    width: fit-content;
   }
 }
 
